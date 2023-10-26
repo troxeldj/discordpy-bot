@@ -6,3 +6,4 @@ lib64/
 share/
 pyvenv.cfg
 cogs/__pycache__/*
+.env

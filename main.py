@@ -2,8 +2,13 @@ import discord
 from discord.ext import commands
 import asyncio
 from cogs import utility, admin, music
+from dotenv import load_dotenv
+import os
 
-TOKEN = 'INSERT TOKEN HERE'
+load_dotenv()
+
+TOKEN = os.getenv('DISCORD_TOKEN')
+
 intents = discord.Intents.default()
 intents.members = True
 intents.message_content = True
