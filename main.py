@@ -3,7 +3,7 @@ from discord.ext import commands
 import asyncio
 from cogs import utility, admin, music
 
-TOKEN = 'MTE2MjA1Njc1MjY3MDQ2MjAyMw.G7DjfE.sjJWE49KYhwDNMWRy1BWr8vgNEWjv_YCjaHCSY'
+TOKEN = 'INSERT TOKEN HERE'
 intents = discord.Intents.default()
 intents.members = True
 intents.message_content = True
