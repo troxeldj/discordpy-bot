@@ -11,8 +11,10 @@ Steps to Use:
 1. Create Discord application and obtain application/bot secret. [Docs Link](https://discordpy.readthedocs.io/en/stable/discord.html)
 2. Create .env in root of project.
 3. Add DISCORD_TOKEN=\<YOUR TOKEN> to the .env file.
-4. Invite bot to your server(s).
-5. Run main.py and allow the program to import commands.
+4. execute "pip install -r requirements.txt"
+5. Run main.py
+6. Invite bot to your server(s).
+7. Run main.py and allow the program to import commands.
 
 ## Cogs
 
