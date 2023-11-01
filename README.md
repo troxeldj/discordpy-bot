@@ -6,6 +6,14 @@ This is a discord music bot made using discord.py. This music bot utilizes slash
 /<COMMANDNAME> <PARAMETERS>
 ```
 
+Steps to Use:
+
+1. Create Discord application and obtain application/bot secret. [Docs Link](https://discordpy.readthedocs.io/en/stable/discord.html)
+2. Create .env in root of project.
+3. Add DISCORD_TOKEN=\<YOUR TOKEN> to the .env file.
+4. Invite bot to your server(s).
+5. Run main.py and allow the program to import commands.
+
 ## Cogs
 
 ### Admin
@@ -33,8 +41,29 @@ This is a discord music bot made using discord.py. This music bot utilizes slash
 ### Utility
 
 **Coinflip**: Flips a coin and returns heads or tails.
+
 **Roll**: Rolls a number between one and the number specified in the command. If no number is specified, then six is the default.
 
 **Pick**: Randomly picks between a list of space delimited user-specified items.
 
 **Math**: Evaluates simple math expressions.
+
+### Economy
+
+**Balance**: Retrieves the balance for the user who initiated the command
+
+**Gamble**: Allows the user to gamble a user-defined amount of money.
+
+**Pay**: Allows the user to gift or send some of their money to another user in the guild.
+
+**Daily**: Claim Daily Coin Reward
+
+**Leaderboard**: Displays the top 10 richest members in the guild.
+
+## Todo
+
+- Youtube Playlists.
+- Youtube Query Strings (Fetch links using string).
+- Look into Lavalink.
+- Add Features and Improve Economy Commands.
+- Add additional utility commands.

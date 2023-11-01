@@ -7,3 +7,4 @@ share/
 pyvenv.cfg
 cogs/__pycache__/*
 .env
+database.db
