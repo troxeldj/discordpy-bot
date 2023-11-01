@@ -11,8 +11,12 @@ class Economy(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
         self.connection = sqlite3.connect('database.db')
+        print("DB Connection Established")
         
-
+    def __del__(self):
+        print("DB Connection Closed.")
+        self.connection.close()
+    
     @commands.Cog.listener()
     async def on_ready(self):
         print("Economy cog is ready.")
