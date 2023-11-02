@@ -10,7 +10,7 @@ Steps to Use:
 
 1. Create Discord application and obtain application/bot secret. [Docs Link](https://discordpy.readthedocs.io/en/stable/discord.html)
 2. Create .env in root of project.
-3. Add DISCORD_TOKEN=\<YOUR TOKEN> to the .env file.
+3. Add Params to a .env file (Use the example).
 4. execute "pip install -r requirements.txt"
 5. Run main.py
 6. Invite bot to your server(s).
@@ -79,7 +79,14 @@ NOTE: Requires an openweathermap API Key in .env called WEATHER_API_KEY
 
 **Level**: Retrieves and displays the user's current level
 
-**lvlboard**: Displays the 10 members with the highest levels on the guild.
+**Lvlboard**: Displays the 10 members with the highest levels on the guild.
+
+## Technologies Used
+
+1. Discord.py - [GitHub](<(https://github.com/Rapptz/discord.py)>) - [Docs](<(https://github.com/Rapptz/discord.py)>)
+2. yt-dlp - [GitHub](https://github.com/yt-dlp/yt-dlp)
+3. python-dotenv - [GitHub](https://github.com/yt-dlp/yt-dlp)
+4. OpenWeatherMap API - [Site](https://openweathermap.org/api)
 
 ## Todo
 
