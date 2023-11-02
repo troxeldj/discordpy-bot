@@ -14,7 +14,13 @@ class Music(commands.Cog):
         self.is_playing = {}
         self.is_paused = {}
         
+        # TODO: Find class Name for this
+        # Holds Music Queue
+        # Guild ID -> List of ##
         self.musicQueue = {}
+        
+        # Holds queue Index
+        # Guild ID -> Index (int)
         self.queueIndex = {}
 
         self.YTDL_OPTIONS = {
@@ -93,8 +99,28 @@ class Music(commands.Cog):
         else:
             await interaction.response.send_message("Bot is not connected to a voice channel.")
 
+    # Command that takes in a search query and returns a list of videos that match.
+    def search_YT(self, query):
+        query = parse.quote(query)
+        url = f"https://youtube.com/results?search_query={query}"
+        response = request.urlopen(url)
+        videos = re.findall(r"watch\?v=(\S{11})", response.read().decode())
+        return [f"/watch?v={video}" for video in videos][1:11]
+
+    def isValidYTURL(self, url):
+        return re.match(r"https://[www.]*youtube.com.*", url) != None
+
+    # TODO: Implement
+    def isPlaylistURL(self, url):
+        pass
+    
+    # TODO: Implement
+    def getSongInformation(self, url):
+        pass
+    
+    # TODO: Fix up with above functions
     @discord.app_commands.command(name="play", description="Plays a song from a link.")
-    async def play(self, interaction, url: str):
+    async def play(self, interaction, query: str):
         guild_id = int(interaction.guild.id)
         await interaction.response.defer()
         if interaction.user.voice == None: # If user not in channel, return
@@ -106,6 +132,11 @@ class Music(commands.Cog):
             self.vc[guild_id] = await userChannel.connect()
         else: # If bot in diff channel, switch voice channel
             await self.vc[guild_id].move_to(interaction.user.voice.channel)
+
+        if self.isValidYTURL(query): # Valid youtubeURL
+            pass
+        else: # Query requires searching youtube
+            pass
 
         # Get song information
         with YoutubeDL (self.YTDL_OPTIONS) as ydl:
