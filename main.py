@@ -1,7 +1,7 @@
 import discord
 from discord.ext import commands
 import asyncio
-from cogs import utility, admin, music, economy
+from cogs import utility, admin, music, economy, levels
 from dotenv import load_dotenv
 import os
 
@@ -25,6 +25,7 @@ async def main():
     await bot.add_cog(utility.Utility(bot))
     await bot.add_cog(music.Music(bot))
     await bot.add_cog(economy.Economy(bot))
+    await bot.add_cog(levels.Levels(bot))
     
 asyncio.run(main())
 

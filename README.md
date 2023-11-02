@@ -62,6 +62,12 @@ Steps to Use:
 
 **Leaderboard**: Displays the top 10 richest members in the guild.
 
+### Levels
+
+**Level**: Retrieves and displays the user's current level
+
+**lvlboard**: Displays the 10 members with the highest levels on the guild.
+
 ## Todo
 
 - Youtube Playlists.
