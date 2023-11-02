@@ -3,11 +3,11 @@ from discord.ext import commands
 import asyncio
 from cogs import utility, admin, music, economy, levels
 from dotenv import load_dotenv
-import os
+from os import getenv
 
 load_dotenv()
 
-TOKEN = os.getenv('DISCORD_TOKEN')
+TOKEN = getenv('DISCORD_TOKEN')
 
 intents = discord.Intents.default()
 intents.members = True

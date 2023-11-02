@@ -1,6 +1,15 @@
 from discord.ext import commands
 import discord
 import random
+import datetime
+import asyncio
+import requests
+from dotenv import load_dotenv
+from os import getenv
+
+load_dotenv()
+
+WEATHER_API_KEY = getenv('WEATHER_API_KEY')
 
 class Utility(commands.Cog):
     def __init__(self, bot):
@@ -75,7 +84,54 @@ class Utility(commands.Cog):
         embed.add_field(name="Created At", value=interaction.guild.created_at.strftime("%a, %B, %#d, %Y, %I:%M %p "))
         await interaction.response.send_message(embed=embed)
 
+    @discord.app_commands.command(name="remind", description="Reminds you of something.")
+    async def reminder(self, interaction: discord.Interaction, time: str, *, reminder: str):
+        seconds = 0
+        if reminder is None:
+            await interaction.response.send_message("Please specify what do you want me to remind you about.")
+            return
+        if time.lower().endswith("d"):
+            seconds += int(time[:-1]) * 60 * 60 * 24
+            counter = f"{seconds // 60 // 60 // 24} days"
+        if time.lower().endswith("h"):
+            seconds += int(time[:-1]) * 60 * 60
+            counter = f"{seconds // 60 // 60} hours"
+        elif time.lower().endswith("m"):
+            seconds += int(time[:-1]) * 60
+            counter = f"{seconds // 60} minutes"
+        elif time.lower().endswith("s"):
+            seconds += int(time[:-1])
+            counter = f"{seconds} seconds"
+        if seconds == 0:
+            await interaction.response.send_message("Please specify a proper duration.")
+        elif seconds > 7776000:
+            await interaction.response.send_message("You have specified a too long duration!\nMaximum duration is 90 days.")
+        else:
+            await interaction.response.send_message(f"Alright, I will remind you about {reminder} in {counter}.")
+            await asyncio.sleep(seconds)
+            await interaction.followup.send(f"Hi, you asked me to remind you about {reminder} {counter} ago.")
     
+    @discord.app_commands.command(name="weather", description="Displays the weather.")
+    async def weather(self, interaction: discord.Interaction, *, city: str):
+        url = f"https://api.openweathermap.org/data/2.5/weather?q={city}&appid={WEATHER_API_KEY}&units=imperial"
+        response = requests.get(url)
+        data = response.json()
+        if data["cod"] == 200:
+            main = data["main"]
+            wind = data["wind"]
+            weather = data["weather"][0]
+            embed = discord.Embed(title=f"Weather in {data['name']}", color=discord.Colour.green(), timestamp=datetime.datetime.utcnow())
+            embed.add_field(name="Description", value=weather["description"])
+            embed.add_field(name="Temperature", value=f'{main["temp"]}°F')
+            embed.add_field(name="Feels Like", value=f'{main["feels_like"]}°F')
+            embed.add_field(name="Humidity", value=f'{main["humidity"]}%')
+            embed.add_field(name="Wind Speed", value=f'{wind["speed"]} mph')
+            embed.add_field(name="Cloudiness", value=f'{data["clouds"]["all"]}%')
+            embed.set_thumbnail(url=f'http://openweathermap.org/img/wn/{weather["icon"]}.png')
+            await interaction.response.send_message(embed=embed)
+        else:
+            await interaction.response.send_message("Error finding weather.")
+
     @discord.app_commands.command(name="help", description="Displays the help menu.")
     async def help(self, interaction: discord.Interaction):
         embed = discord.Embed(title="Help", description="Here's a list of commands.", color=discord.Colour.green())
@@ -85,6 +141,8 @@ class Utility(commands.Cog):
         embed.add_field(name="/math", value="Evaluates a math expression.", inline=False)
         embed.add_field(name="/userinfo", value="Displays information about a user.", inline=False)
         embed.add_field(name="/serverinfo", value="Displays information about the server.", inline=False)
+        embed.add_field(name="/remind", value="Reminds you of something.", inline=False)
+        embed.add_field(name="/weather", value="Displays the weather given a city.", inline=False)
         embed.add_field(name="/play", value="Plays a song.", inline=False)
         embed.add_field(name="/pause", value="Pauses the song.", inline=False)
         embed.add_field(name="/resume", value="Resumes the song.", inline=False)
