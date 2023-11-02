@@ -8,3 +8,4 @@ pyvenv.cfg
 cogs/__pycache__/*
 .env
 economy.db
+leveling.db
