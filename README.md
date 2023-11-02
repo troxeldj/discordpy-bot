@@ -24,6 +24,12 @@ Steps to Use:
 
 **Announce**: Sends an announcement to the selected channel.
 
+**Kick**: Kicks a user
+
+**Ban**: Bans a user
+
+**Timeout**: Times out a user for a user-defined number of seconds.
+
 ### Music
 
 **Play**: Plays music from a youtube link (Query string to be implemented).
@@ -51,6 +57,11 @@ Steps to Use:
 **UserInfo**: Gives information about a user. If a user is not specified, then it will send information on user who issued the command.
 
 **ServerInfo**: Gives information about the current server/guild.
+
+**Reminder**: Will remind the user about something given time. (Accepts: Number + d -> day, h-> hour, m -> minute, s -> second)
+
+**Weather**: Will return an embed with the weather for a specified city name.
+NOTE: Requires an openweathermap API Key in .env called WEATHER_API_KEY
 
 ### Economy
 
