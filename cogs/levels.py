@@ -12,10 +12,10 @@ class Levels(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
         self.connection = sqlite3.connect('leveling.db')
-        print("DB Connection Established")
+        print("Levels DB Connection Established")
     
     def __del__(self):
-        print("DB Connection Closed.")
+        print("Levels DB Connection Closed.")
         self.connection.close()
 
     @commands.Cog.listener()

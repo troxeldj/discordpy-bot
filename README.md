@@ -20,11 +20,9 @@ Steps to Use:
 
 ### Admin
 
-**UserInfo**: Gives information about a user. If a user is not specified, then it will send information on user who issued the command.
-
-**ServerInfo**: Gives information about the current server/guild.
-
 **Shutdown**: Shuts down the bot.
+
+**Announce**: Sends an announcement to the selected channel.
 
 ### Music
 
@@ -49,6 +47,10 @@ Steps to Use:
 **Pick**: Randomly picks between a list of space delimited user-specified items.
 
 **Math**: Evaluates simple math expressions.
+
+**UserInfo**: Gives information about a user. If a user is not specified, then it will send information on user who issued the command.
+
+**ServerInfo**: Gives information about the current server/guild.
 
 ### Economy
 
