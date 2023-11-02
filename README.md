@@ -83,7 +83,7 @@ NOTE: Requires an openweathermap API Key in .env called WEATHER_API_KEY
 
 ## Technologies Used
 
-1. Discord.py - [GitHub](<(https://github.com/Rapptz/discord.py)>) - [Docs](<(https://github.com/Rapptz/discord.py)>)
+1. Discord.py - [GitHub](https://github.com/Rapptz/discord.py) - [Docs](https://github.com/Rapptz/discord.py)
 2. yt-dlp - [GitHub](https://github.com/yt-dlp/yt-dlp)
 3. python-dotenv - [GitHub](https://github.com/yt-dlp/yt-dlp)
 4. OpenWeatherMap API - [Site](https://openweathermap.org/api)
