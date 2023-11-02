@@ -32,6 +32,37 @@ class Admin(commands.Cog):
             return
         await channel.send(message)
         await interaction.response.send_message("Announcement sent.")                
+
+    @discord.app_commands.command(name="kick", description="Kicks a user.")
+    @discord.app_commands.check(is_admin)
+    async def kick(self, interaction, member: discord.Member, reason: str):
+        if member == None:
+            await interaction.response.send_message("Member not found.")
+            return
+        await member.kick(reason=reason)
+        await interaction.response.send_message(f"{member} has been kicked.")
+
+    @discord.app_commands.command(name="ban", description="Bans a user.")
+    @discord.app_commands.check(is_admin)
+    async def ban(self, interaction, member: discord.Member, reason: str):
+        if member == None:
+            await interaction.response.send_message("Member not found.")
+            return
+        await member.ban(reason=reason)
+        await interaction.response.send_message(f"{member} has been banned.")
+
+    @discord.app_commands.command(name="timeout", description="Timeouts a user.")
+    @discord.app_commands.check(is_admin)
+    async def timeout(self, interaction, member: discord.Member, duration: str):
+        if member == None:
+            await interaction.response.send_message("Member not found.")
+            return
+        if duration == None or duration.isnumeric() == False:
+            await interaction.response.send_message("Invalid duration.")
+            return
+        duration = datetime.timedelta(seconds=int(duration))
+        await member.timeout(duration)
+        await interaction.response.send_message(f"{member} has been timed out for {duration} seconds.")
     
     # @commands.command()
     # async def ban(self, ctx, member, reason):
