@@ -12,15 +12,32 @@ load_dotenv()
 WEATHER_API_KEY = getenv('WEATHER_API_KEY')
 
 class Utility(commands.Cog):
-    def __init__(self, bot):
+    def __init__(self, bot: commands.Bot) -> None:
+        """
+        Initializes the Utility cog.
+
+        Args:
+            bot (discord.ext.commands.Bot): The bot instance.
+        """
         self.bot = bot
     
     @commands.Cog.listener()
-    async def on_ready(self):
+    async def on_ready(self) -> None:
+        """
+        Called when the bot is ready.
+
+        Prints a message to the console indicating that the Utility cog is ready.
+        """
         print("Utility cog is ready.")
 
     @discord.app_commands.command(name="coinflip", description="Flips a coin.")
     async def coinflip(self, interaction: discord.Interaction):
+        """
+        Flips a coin.
+
+        Args:
+            interaction (discord.Interaction): The interaction object.
+        """
         randNum = random.randint(1,10)
         if randNum <= 5:
             await interaction.response.send_message("Heads")
@@ -28,7 +45,14 @@ class Utility(commands.Cog):
             await interaction.response.send_message("Tails")
     
     @discord.app_commands.command(name="roll", description="Rolls a dice.")
-    async def roll(self, interaction: discord.Interaction, arg: int=6):
+    async def roll(self, interaction: discord.Interaction, arg: int=6) -> None:
+        """
+        Rolls a dice given a user specified number of sides.
+
+        Args:
+            interaction (discord.Interaction): The interaction object.
+            arg (int, optional): The number of sides on the dice. Defaults to 6.
+        """
         randNum = random.randint(1, int(arg))
         await interaction.response.send_message(randNum)
     
@@ -38,7 +62,14 @@ class Utility(commands.Cog):
         await interaction.response.send_message(random.choice(args))
 
     @discord.app_commands.command(name="math", description="Evaluates a math expression.")
-    async def math(self, interaction, expression:str):
+    async def math(self, interaction: discord.Interaction, expression:str) -> None:
+        """
+        Evaluates a math expression.
+
+        Args:
+            interaction (discord.Interaction): The interaction object.
+            expression (str): The math expression to evaluate.
+        """
         isExpression = True
         for i in [*expression]:
             if str(i) not in ['+', '-', '*', '/', '%', '(', ')'] and not i.isdigit():
@@ -54,7 +85,14 @@ class Utility(commands.Cog):
             await interaction.response.send_message("Not a valid math expression.")
         
     @discord.app_commands.command(name="userinfo", description="Displays information about a user.")
-    async def userinfo(self, interaction, member:discord.Member = None):
+    async def userinfo(self, interaction, member:discord.Member = None) -> None:
+        """
+        Displays information about a user.
+
+        Args:
+            interaction (discord.Interaction): The interaction object.
+            member (discord.Member, optional): The member to display information about. Defaults to None.
+        """
         if member == None:
             member = interaction.user
         roles = [role for role in member.roles]
@@ -74,6 +112,12 @@ class Utility(commands.Cog):
     
     @discord.app_commands.command(name="serverinfo", description="Displays information about the server.")
     async def serverinfo(self, interaction: discord.Interaction):
+        """
+        Displays information about the current server.
+
+        Args:
+            interaction (discord.Interaction): The interaction object.
+        """
         embed = discord.Embed(title="Server Info", description=f'Here\'s the server info for {interaction.guild.name}', color=discord.Colour.green(), timestamp=datetime.datetime.utcnow())
         embed.set_thumbnail(url=interaction.guild.icon)
         embed.add_field(name="Description", value=interaction.guild.description)
@@ -85,7 +129,20 @@ class Utility(commands.Cog):
         await interaction.response.send_message(embed=embed)
 
     @discord.app_commands.command(name="remind", description="Reminds you of something.")
-    async def reminder(self, interaction: discord.Interaction, time: str, *, reminder: str):
+    async def reminder(self, interaction: discord.Interaction, time: str, *, reminder: str) -> None:
+        """
+        Reminds you of something after a specified amount of time.
+        
+        d = days
+        h = hours
+        m = minutes
+        s = seconds
+
+        Args:
+            interaction (discord.Interaction): The interaction object.
+            time (str): The amount of time to wait before reminding you.
+            reminder (str): What to remind you about.
+        """
         seconds = 0
         if reminder is None:
             await interaction.response.send_message("Please specify what do you want me to remind you about.")
@@ -113,6 +170,13 @@ class Utility(commands.Cog):
     
     @discord.app_commands.command(name="weather", description="Displays the weather.")
     async def weather(self, interaction: discord.Interaction, *, city: str):
+        """
+        Gets the current weather for a given city.
+
+        Args:
+            interaction (discord.Interaction): The interaction object.
+            city (str): The city to get the weather for.
+        """
         url = f"https://api.openweathermap.org/data/2.5/weather?q={city}&appid={WEATHER_API_KEY}&units=imperial"
         response = requests.get(url)
         data = response.json()
@@ -133,7 +197,13 @@ class Utility(commands.Cog):
             await interaction.response.send_message("Error finding weather.")
 
     @discord.app_commands.command(name="help", description="Displays the help menu.")
-    async def help(self, interaction: discord.Interaction):
+    async def help(self, interaction: discord.Interaction) -> None:
+        """
+        Displays the help menu.
+
+        Args:
+            interaction (discord.Interaction): The interaction object.
+        """
         embed = discord.Embed(title="Help", description="Here's a list of commands.", color=discord.Colour.green())
         embed.add_field(name="/coinflip", value="Flips a coin.", inline=False)
         embed.add_field(name="/roll", value="Rolls a dice.", inline=False)
