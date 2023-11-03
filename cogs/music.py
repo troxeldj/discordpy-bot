@@ -8,20 +8,34 @@ import json
 from yt_dlp import YoutubeDL
 
 class Music(commands.Cog):
-    def __init__(self, bot):
+    def __init__(self, bot: commands.Bot) -> None:
+        """
+        Initializes the Music cog.
+
+        Args:
+            bot (discord.ext.commands.Bot): The bot instance.
+        """
         self.bot = bot
 
+        # Holds Playing Status
+        # Guild ID -> Bool
         self.is_playing = {}
+        
+        # Holds Paused Status
+        # Guild ID -> Bool
         self.is_paused = {}
         
-        # TODO: Find class Name for this
         # Holds Music Queue
-        # Guild ID -> List of ##
+        # Guild ID -> List of Music Objects
         self.musicQueue = {}
         
         # Holds queue Index
         # Guild ID -> Index (int)
         self.queueIndex = {}
+
+        # Holds Connected VoiceChannel for a Guild
+        # Guild ID -> VoiceClient Object
+        self.vc = {}
 
         self.YTDL_OPTIONS = {
         'format': 'bestaudio/best',
@@ -38,11 +52,8 @@ class Music(commands.Cog):
         '-reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5 -probesize 200M',
         'options': '-vn'
     }
-        # Holds Connected VoiceChannel for a Guild
-        # Guild ID -> VoiceClient Object
-        self.vc = {}
 
-    def now_playing_embed(self, interaction, song):
+    def now_playing_embed(self, interaction: discord.Interaction, song: dict) -> discord.Embed:
         title = song['title']
         link = song['link']
         thumbnail = song['thumbnail']
@@ -60,6 +71,11 @@ class Music(commands.Cog):
 
     @commands.Cog.listener()
     async def on_ready(self):
+        """
+        Called when the bot is ready.
+
+        Initializes the music queue, queue index, and voice client for each guild that the bot is a member of.
+        """
         print("Music cog is ready.")
         for guild in self.bot.guilds:
             id = int(guild.id)
@@ -69,7 +85,17 @@ class Music(commands.Cog):
             self.is_playing[id] = self.is_paused[id] = False
     
     @commands.Cog.listener()
-    async def on_voice_state_update(self, member, before, after):
+    async def on_voice_state_update(self, member: discord.Member, before: discord.VoiceState, after: discord.VoiceState):
+        """
+        Called when a member's voice state changes.
+
+        If the bot is the only member in a voice channel that a member leaves, the bot stops playing audio.
+
+        Args:
+            member (discord.Member): The member whose voice state changed.
+            before (discord.VoiceState): The member's voice state before the change.
+            after (discord.VoiceState): The member's voice state after the change.
+        """
         id = int(member.guild.id)
         if member.id != self.bot.user.id and before.channel != None and after.channel != before.channel:
             remainingChannelMembers = before.channel.members
@@ -80,7 +106,13 @@ class Music(commands.Cog):
                 await self.vc[id].disconnect()
     
     @discord.app_commands.command(name="join", description="Joins the current voice channel.")
-    async def join(self, interaction):
+    async def join(self, interaction: discord.Interaction) -> None:
+        """
+        Stops the current song.
+
+        Args:
+            interaction (discord.Interaction): The interaction object.
+        """
         guild_id = int(interaction.guild.id)
         if interaction.user.voice:
             userChannel = interaction.user.voice.channel # VoiceChannel Object
@@ -90,7 +122,13 @@ class Music(commands.Cog):
             await interaction.response.send_message("You are not connected to a voice channel.")
     
     @discord.app_commands.command(name="leave", description="Disconnects from the current voice channel.")
-    async def leave(self, interaction):
+    async def leave(self, interaction: discord.Interaction) -> None:
+        """
+        Disconnects from the current voice channel.
+
+        Args:
+            interaction (discord.Interaction): The interaction object.
+        """
         guild_id = int(interaction.guild.id)
         if self.vc[guild_id] != None:
             await self.vc[guild_id].disconnect()
@@ -99,24 +137,69 @@ class Music(commands.Cog):
         else:
             await interaction.response.send_message("Bot is not connected to a voice channel.")
 
-    # Command that takes in a search query and returns a list of videos that match.
-    def search_YT(self, query):
+    def search_YT(self, query: str) -> list:
+        """
+        Searches YouTube for videos matching a given query. Returns a list of up to 10 video URLs.
+
+        Args:
+            query (str): The search query.
+
+        Returns:
+            list: A list of up to 10 video URLs.
+        """
         query = parse.quote(query)
         url = f"https://youtube.com/results?search_query={query}"
         response = request.urlopen(url)
         videos = re.findall(r"watch\?v=(\S{11})", response.read().decode())
         return [f"https://youtube.com/watch?v={video}" for video in videos][1:11]
 
-    def isValidYTURL(self, url):
+    def isValidYTURL(self, url: str) -> bool:
+        """
+        Checks if a given URL is a valid YouTube URL.
+
+        Args:
+            url (str): The URL to check.
+
+        Returns:
+            bool: True if the URL is a valid YouTube URL, False otherwise.
+        """
         return re.match(r"https://[www.]*youtube.com.*", url) != None
     
-    def isYTVideoURL(self, url):
+    def isYTVideoURL(self, url:str) -> bool:
+        """
+        Checks if a given URL is a YouTube video URL (youtube.com/watch).
+
+        Args:
+            url (str): The URL to check.
+
+        Returns:
+            bool: True if the URL is a YouTube video URL, False otherwise.
+        """
         return re.match(r"https:\/\/(www\.){0,1}youtube.com/watch.*", url) != None
     
-    def isYTPlaylistURL(self, url):
+    def isYTPlaylistURL(self, url: str) -> bool:
+        """
+        Checks if a given URL is a YouTube playlist URL (youtube.com/playlist).
+
+        Args:
+            url (str): The URL to check.
+
+        Returns:
+            bool: True if the URL is a YouTube playlist URL, False otherwise.
+        """
         return re.match(r"https:\/\/(www\.){0,1}youtube.com/playlist.*", url) != None
     
-    async def getSongInfo(self, url, interaction):
+    async def getSongInfo(self, url: str, interaction: discord.Interaction):
+        """
+        Extracts information about a song from a given URL.
+
+        Args:
+            url (str): The URL of the song to extract information from.
+            interaction (discord.Interaction): The interaction object.
+
+        Returns:
+            dict: A dictionary containing information about the song, including the stream URL, title, thumbnail URL, channel name, and link. Returns None if the song could not be downloaded.
+        """
         with YoutubeDL (self.YTDL_OPTIONS) as ydl:
             try:
                 data = ydl.extract_info(url, download=False)
@@ -126,10 +209,22 @@ class Music(commands.Cog):
             except:
                 await interaction.followup.send("Could not download the song. Incorrect format, try some different keywords.")
                 return
-    
+
     # TODO: Fix up with above functions
     @discord.app_commands.command(name="play", description="Plays a song from a link.")
     async def play(self, interaction, query: str):
+        """
+        Plays a song from a given URL.
+        
+        Currently Supports:
+        - Youtube Video URL
+        - Youtube Playlist URL - Not yet implemented
+        - Search Query - Not yet implemented
+
+        Args:
+            ctx (discord.ext.commands.Context): The context object.
+            url (str): The URL of the song to play.
+        """
         guild_id = int(interaction.guild.id)
         await interaction.response.defer()
         if interaction.user.voice == None: # If user not in channel, send message and return
@@ -162,7 +257,13 @@ class Music(commands.Cog):
             await interaction.followup.send("Search Required. This feature is not yet implemented.")
     
     @discord.app_commands.command(name="pause", description="Pauses the current song.")
-    async def pause(self, interaction):
+    async def pause(self, interaction: discord.Interaction) -> None:
+        """
+        Pauses the current song.
+
+        Args:
+            interaction (discord.Interaction): The interaction object.
+        """
         guild_id = int(interaction.guild.id)
         if self.is_playing[guild_id] == False:
             await interaction.response.send_message("There is no audio to be paused at the moment.")
@@ -178,7 +279,13 @@ class Music(commands.Cog):
                 return
 
     @discord.app_commands.command(name="resume", description="Resumes the current song.")
-    async def resume(self, interaction):
+    async def resume(self, interaction: discord.Interaction) -> None:
+        """
+        Resumes the current song.
+
+        Args:
+            interaction (discord.Interaction): The interaction object.
+        """
         guild_id = int(interaction.guild.id)
         if self.is_paused[guild_id] == False:
             await interaction.response.send_message("There is no audio to be resumed at the moment.")  
@@ -194,7 +301,13 @@ class Music(commands.Cog):
                 return    
     
     @discord.app_commands.command(name="stop", description="Stops the current song.")
-    async def stop(self, interaction):
+    async def stop(self, interaction: discord.Interaction) -> None:
+        """
+        Stops the current song.
+
+        Args:
+            interaction (discord.Interaction): The interaction object.
+        """
         guild_id = int(interaction.guild.id)
         if self.is_playing[guild_id] == False:
             await interaction.response.send_message("There is no audio to be stopped at the moment.")
