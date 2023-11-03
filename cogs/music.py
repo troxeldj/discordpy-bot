@@ -119,7 +119,6 @@ class Music(commands.Cog):
     async def getSongInfo(self, url, interaction):
         with YoutubeDL (self.YTDL_OPTIONS) as ydl:
             try:
-                print("Getting song info...")
                 data = ydl.extract_info(url, download=False)
                 song = {"stream_url": data['url'], "title": data['title'], "thumbnail_url": data['thumbnail'], "channel_name": data['uploader'], "link": data['webpage_url']}
                 song['stream_obj'] = discord.FFmpegPCMAudio(song['stream_url'], **self.FFMPEG_OPTIONS)
@@ -150,16 +149,17 @@ class Music(commands.Cog):
                 songInfo = await self.getSongInfo(query, interaction)
                 if songInfo['stream_url'] == None:
                     await interaction.followup.send("Could not download the song. Incorrect format, try some different keywords.")
+                    return
+                self.musicQueue[guild_id].append(songInfo)
                 if self.is_playing[guild_id] == False:
-                    self.musicQueue[guild_id].append(songInfo)
-                    self.musicQueue[guild_id][0]['stream_obj'].start()
+                    self.vc[guild_id].play(songInfo['stream_obj'])
                     self.is_playing[guild_id] = True
                     self.is_paused[guild_id] = False
                     await interaction.followup.send("Now playing!")
             else:
                 await interaction.followup.send("Invalid Youtube URL. Please check your input and try again.")
         else: # Requires searching
-            pass
+            await interaction.followup.send("Search Required. This feature is not yet implemented.")
     
     @discord.app_commands.command(name="pause", description="Pauses the current song.")
     async def pause(self, interaction):
