@@ -105,57 +105,61 @@ class Music(commands.Cog):
         url = f"https://youtube.com/results?search_query={query}"
         response = request.urlopen(url)
         videos = re.findall(r"watch\?v=(\S{11})", response.read().decode())
-        return [f"/watch?v={video}" for video in videos][1:11]
+        return [f"https://youtube.com/watch?v={video}" for video in videos][1:11]
 
     def isValidYTURL(self, url):
         return re.match(r"https://[www.]*youtube.com.*", url) != None
-
-    # TODO: Implement
-    def isPlaylistURL(self, url):
-        pass
     
-    # TODO: Implement
-    def getSongInformation(self, url):
-        pass
+    def isYTVideoURL(self, url):
+        return re.match(r"https:\/\/(www\.){0,1}youtube.com/watch.*", url) != None
+    
+    def isYTPlaylistURL(self, url):
+        return re.match(r"https:\/\/(www\.){0,1}youtube.com/playlist.*", url) != None
+    
+    async def getSongInfo(self, url, interaction):
+        with YoutubeDL (self.YTDL_OPTIONS) as ydl:
+            try:
+                print("Getting song info...")
+                data = ydl.extract_info(url, download=False)
+                song = {"stream_url": data['url'], "title": data['title'], "thumbnail_url": data['thumbnail'], "channel_name": data['uploader'], "link": data['webpage_url']}
+                song['stream_obj'] = discord.FFmpegPCMAudio(song['stream_url'], **self.FFMPEG_OPTIONS)
+                return song
+            except:
+                await interaction.followup.send("Could not download the song. Incorrect format, try some different keywords.")
+                return
     
     # TODO: Fix up with above functions
     @discord.app_commands.command(name="play", description="Plays a song from a link.")
     async def play(self, interaction, query: str):
         guild_id = int(interaction.guild.id)
         await interaction.response.defer()
-        if interaction.user.voice == None: # If user not in channel, return
+        if interaction.user.voice == None: # If user not in channel, send message and return
             await interaction.followup.send("You must be connected to a voice channel.")
             return
         
         if self.vc[guild_id] == None: # If bot not in channel, join channel
             userChannel = interaction.user.voice.channel
-            self.vc[guild_id] = await userChannel.connect()
+            self.vc[guild_id] = await userChannel.connect() # VoiceClient Object
         else: # If bot in diff channel, switch voice channel
-            await self.vc[guild_id].move_to(interaction.user.voice.channel)
+            await self.vc[guild_id].move_to(userChannel)
 
         if self.isValidYTURL(query): # Valid youtubeURL
+            if self.isYTPlaylistURL(query):
+                await interaction.followup.send("Playlist URL detected. This feature is not yet implemented.")
+            elif self.isYTVideoURL(query):
+                songInfo = await self.getSongInfo(query, interaction)
+                if songInfo['stream_url'] == None:
+                    await interaction.followup.send("Could not download the song. Incorrect format, try some different keywords.")
+                if self.is_playing[guild_id] == False:
+                    self.musicQueue[guild_id].append(songInfo)
+                    self.musicQueue[guild_id][0]['stream_obj'].start()
+                    self.is_playing[guild_id] = True
+                    self.is_paused[guild_id] = False
+                    await interaction.followup.send("Now playing!")
+            else:
+                await interaction.followup.send("Invalid Youtube URL. Please check your input and try again.")
+        else: # Requires searching
             pass
-        else: # Query requires searching youtube
-            pass
-
-        # Get song information
-        with YoutubeDL (self.YTDL_OPTIONS) as ydl:
-            try:
-                data = ydl.extract_info(url, download=False)
-                filename = data['url']
-            except:
-                await interaction.followup.send("Could not download the song. Incorrect format, try some different keywords.")
-                return
-        
-        # Play Song
-        try:
-            self.vc[guild_id].play(discord.FFmpegPCMAudio(filename, **self.FFMPEG_OPTIONS))
-            await interaction.followup.send("Now playing!")
-            self.is_playing[guild_id] = True
-        except Exception as e:
-            print(e)
-            await interaction.followup.send("Could not play the song. Incorrect format, try some different keywords.")
-            return
     
     @discord.app_commands.command(name="pause", description="Pauses the current song.")
     async def pause(self, interaction):

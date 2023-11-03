@@ -6,6 +6,7 @@ lib64/
 share/
 pyvenv.cfg
 cogs/__pycache__/*
+core
 .env
 economy.db
 leveling.db
