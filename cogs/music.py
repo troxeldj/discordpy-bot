@@ -340,3 +340,45 @@ class Music(commands.Cog):
                 print(e)
                 await interaction.response.send_message("Could not stop the song.")
                 return
+
+    @discord.app_commands.command(name="queue", description="Displays the current music queue.")
+    async def queue(self, interaction: discord.Interaction, num: str = "10") -> None:
+        """
+        Displays the current music queue.
+
+        Args:
+            interaction (discord.Interaction): The interaction object.
+            num (str, optional): The number of songs to display. Defaults to 10.
+        """
+        guild_id = int(interaction.guild.id)
+        if not num.isnumeric():
+            await interaction.response.send_message("Invalid argument. Please enter a number.")
+            return
+        num = int(num)
+        embed = discord.Embed(
+            title="Music Queue",
+            colour=discord.Colour.blue())
+        if len(self.musicQueue[guild_id]) == 0:
+            embed.add_field(name="No songs in queue.",
+                            value="Add some songs with /play or /add.")
+            await interaction.response.send_message(embed=embed)
+            return
+        for i in range(num):
+            if i >= len(self.musicQueue[guild_id]):
+                break
+            embed.add_field(
+                name=f"Song #{i+1}", value=f"{self.musicQueue[guild_id][i]['title']} - {self.musicQueue[guild_id][i]['channel_name']}", inline=False)
+        await interaction.response.send_message(embed=embed)
+
+    @discord.app_commands.command(name="clear", description="Clears the current music queue.")
+    async def clear(self, interaction: discord.Interaction) -> None:
+        """
+        Clears the current music queue.
+
+        Args:
+            interaction (discord.Interaction): The interaction object.
+        """
+        guild_id = int(interaction.guild.id)
+        self.musicQueue[guild_id] = []
+        self.queueIndex[guild_id] = 0
+        await interaction.response.send_message("Music queue cleared!")
