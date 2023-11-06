@@ -44,6 +44,10 @@ Steps to Use:
 
 **Leave**: Leaves the voice channel in the current server/guild.
 
+**Queue**: Displays the current music queue.
+
+**Clear**: Clears the current music queue.
+
 ### Utility
 
 **Coinflip**: Flips a coin and returns heads or tails.
