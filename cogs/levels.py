@@ -8,12 +8,13 @@ EXPERIENCE_MULTIPLIER = 20
 # Experience gained per message
 MESSAGE_EXPERIENCE = 5
 
+
 class Levels(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
         self.connection = sqlite3.connect('leveling.db')
         print("Levels DB Connection Established")
-    
+
     def __del__(self):
         print("Levels DB Connection Closed.")
         self.connection.close()
@@ -22,19 +23,21 @@ class Levels(commands.Cog):
     async def on_ready(self):
         print("Levels cog is ready.")
         self._initDatabase()
-    
+
     @commands.Cog.listener()
     async def on_member_join(self, member):
         guild_id = int(member.guild.id)
         member_id = int(member.id)
-        self.connection.execute("INSERT OR IGNORE INTO levels (guild_id, user_id, user_name, experience, current_lvl) VALUES (?, ?, ?, ?, ?)", (guild_id, member_id, member.name, 0, 0))
+        self.connection.execute(
+            "INSERT OR IGNORE INTO levels (guild_id, user_id, user_name, experience, current_lvl) VALUES (?, ?, ?, ?, ?)", (guild_id, member_id, member.name, 0, 0))
         self.connection.commit()
-    
+
     @commands.Cog.listener()
     async def on_member_remove(self, member):
         guild_id = int(member.guild.id)
         member_id = int(member.id)
-        self.connection.execute("DELETE FROM levels WHERE guild_id = ? AND user_id = ?", (guild_id, member_id))
+        self.connection.execute(
+            "DELETE FROM levels WHERE guild_id = ? AND user_id = ?", (guild_id, member_id))
         self.connection.commit()
 
     @commands.Cog.listener()
@@ -57,7 +60,7 @@ class Levels(commands.Cog):
     def _initDatabase(self):
         self.connection.execute("""CREATE TABLE IF NOT EXISTS LEVELS (
         guild_id INTEGER NOT NULL,
-        user_id INTEGER PRIMARY KEY,
+        user_id INTEGER NOT NULL,
         user_name TEXT NOT NULL,
         experience INTEGER NOT NULL,
         current_lvl INTEGER NOT NULL,
@@ -66,27 +69,32 @@ class Levels(commands.Cog):
         guilds = self.bot.guilds
         for guild in guilds:
             for member in guild.members:
-                self.connection.execute("INSERT OR IGNORE INTO levels (guild_id, user_id, user_name, experience, current_lvl) VALUES (?, ?, ?, ?, ?)", (guild.id, member.id, member.name, 0, 0))
+                self.connection.execute(
+                    "INSERT OR IGNORE INTO levels (guild_id, user_id, user_name, experience, current_lvl) VALUES (?, ?, ?, ?, ?)", (guild.id, member.id, member.name, 0, 0))
         self.connection.commit()
-    
+
     def _getExperience(self, guild_id, user_id):
-        cursor = self.connection.execute("SELECT experience FROM levels WHERE user_id = ? AND guild_id = ?", (user_id, guild_id))
+        cursor = self.connection.execute(
+            "SELECT experience FROM levels WHERE user_id = ? AND guild_id = ?", (user_id, guild_id))
         experience = cursor.fetchone()[0]
         return experience
 
     def _getLevel(self, guild_id, user_id):
-        cursor = self.connection.execute("SELECT current_lvl FROM levels WHERE user_id = ? AND guild_id = ?", (user_id, guild_id))
+        cursor = self.connection.execute(
+            "SELECT current_lvl FROM levels WHERE user_id = ? AND guild_id = ?", (user_id, guild_id))
         current_lvl = cursor.fetchone()[0]
         return current_lvl
 
     def _setExperience(self, guild_id, user_id, newExperience):
-        self.connection.execute("UPDATE levels SET experience = ? WHERE user_id = ? AND guild_id = ?", (newExperience, user_id, guild_id))
+        self.connection.execute(
+            "UPDATE levels SET experience = ? WHERE user_id = ? AND guild_id = ?", (newExperience, user_id, guild_id))
         self.connection.commit()
 
     def _setLevel(self, guild_id, user_id, newLevel):
-        self.connection.execute("UPDATE levels SET current_lvl = ? WHERE user_id = ? AND guild_id = ?", (newLevel, user_id, guild_id))
+        self.connection.execute(
+            "UPDATE levels SET current_lvl = ? WHERE user_id = ? AND guild_id = ?", (newLevel, user_id, guild_id))
         self.connection.commit()
-    
+
     @discord.app_commands.command(name="level", description="Shows your current level.")
     async def level(self, interaction):
         user_id = interaction.user.id
@@ -96,18 +104,23 @@ class Levels(commands.Cog):
         if level == None:
             await interaction.response.send_message("Error getting your level.")
         else:
-            embed = discord.Embed(title="Level", color=discord.Colour.green(), timestamp=datetime.datetime.utcnow())
+            embed = discord.Embed(title="Level", color=discord.Colour.green(
+            ), timestamp=datetime.datetime.utcnow())
             embed.add_field(name="Level", value=level)
-            embed.add_field(name="Experience", value=f"{curExperience}/{level*EXPERIENCE_MULTIPLIER}")
+            embed.add_field(
+                name="Experience", value=f"{curExperience}/{level*EXPERIENCE_MULTIPLIER}")
             embed.set_thumbnail(url=interaction.user.avatar)
             await interaction.response.send_message(embed=embed)
 
     @discord.app_commands.command(name="lvlboard", description="Shows the top 10 users on the server.")
     async def lvlboard(self, interaction):
         guild_id = interaction.guild.id
-        cursor = self.connection.execute("SELECT user_name, experience, current_lvl FROM levels WHERE guild_id = ? ORDER BY experience DESC LIMIT 10", (guild_id,))
+        cursor = self.connection.execute(
+            "SELECT user_name, experience, current_lvl FROM levels WHERE guild_id = ? ORDER BY experience DESC LIMIT 10", (guild_id,))
         rows = cursor.fetchall()
-        embed = discord.Embed(title="Leaderboard", color=discord.Colour.green(), timestamp=datetime.datetime.utcnow())
+        embed = discord.Embed(title="Leaderboard", color=discord.Colour.green(
+        ), timestamp=datetime.datetime.utcnow())
         for row in rows:
-            embed.add_field(name=row[0], value=f"Level: {row[2]}\nExperience: {row[1]}", inline=False)
+            embed.add_field(
+                name=row[0], value=f"Level: {row[2]}\nExperience: {row[1]}", inline=False)
         await interaction.response.send_message(embed=embed)
