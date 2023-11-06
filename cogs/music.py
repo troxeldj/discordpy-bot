@@ -6,6 +6,12 @@ from urllib import parse, request
 import re
 import json
 from yt_dlp import YoutubeDL
+from dotenv import load_dotenv
+from os import getenv
+import googleapiclient.discovery
+
+load_dotenv()
+YOUTUBE_API_KEY = getenv('YOUTUBE_API_KEY')
 
 
 class Music(commands.Cog):
@@ -150,10 +156,17 @@ class Music(commands.Cog):
             list: A list of up to 10 video URLs.
         """
         query = parse.quote(query)
-        url = f"https://youtube.com/results?search_query={query}"
-        response = request.urlopen(url)
-        videos = re.findall(r"watch\?v=(\S{11})", response.read().decode())
-        return [f"https://youtube.com/watch?v={video}" for video in videos][1:11]
+        youtube = googleapiclient.discovery.build(
+            "youtube", "v3", developerKey=YOUTUBE_API_KEY)
+        try:
+            request = youtube.search().list(
+                part="snippet",
+                q=query
+            )
+            response = request.execute()
+        except:
+            return []
+        return [f"https://www.youtube.com/watch?v={item['id']['videoId']}" for item in response['items']]
 
     def isValidYTURL(self, url: str) -> bool:
         """
@@ -191,30 +204,57 @@ class Music(commands.Cog):
         """
         return re.match(r"https:\/\/(www\.){0,1}youtube.com/playlist.*", url) != None
 
-    async def getSongInfo(self, url: str, interaction: discord.Interaction):
-        """
-        Extracts information about a song from a given URL.
-
-        Args:
-            url (str): The URL of the song to extract information from.
-            interaction (discord.Interaction): The interaction object.
-
-        Returns:
-            dict: A dictionary containing information about the song, including the stream URL, title, thumbnail URL, channel name, and link. Returns None if the song could not be downloaded.
-        """
+    async def getStreamURL(self, url: str, interaction: discord.Interaction) -> str:
         with YoutubeDL(self.YTDL_OPTIONS) as ydl:
             try:
+                stream_url = None
                 data = ydl.extract_info(url, download=False)
-                song = {"stream_url": data['url'], "title": data['title'], "thumbnail_url": data['thumbnail'],
-                        "channel_name": data['uploader'], "link": data['webpage_url']}
-                song['stream_obj'] = discord.FFmpegPCMAudio(
-                    song['stream_url'], **self.FFMPEG_OPTIONS)
-                return song
+                if data:
+                    stream_url = data['url']
+                return stream_url
             except:
                 await interaction.followup.send("Could not download the song. Incorrect format, try some different keywords.")
                 return
 
+    def getSongInfo(self, url: str, interaction: discord.Interaction) -> dict:
+        video_id = url.split("=")[1]
+        youtube = googleapiclient.discovery.build(
+            "youtube", "v3", developerKey=YOUTUBE_API_KEY)
+        request = youtube.videos().list(
+            part="snippet",
+            id=video_id
+        )
+        response = request.execute()
+        if response:
+            return {"video_id": response['items'][0]['id'], "url": url, "title": response['items'][0]['snippet']['title'], "artist": response['items'][0]['snippet']['channelTitle'], "thumbnail": response['items'][0]['snippet']['thumbnails']['default']['url']}
+
+    async def getPlaylistInfo(self, url: str, interaction: discord.Interaction) -> list:
+        playlist_id = url.split("=")[1]
+        youtube = googleapiclient.discovery.build(
+            "youtube", "v3", developerKey=YOUTUBE_API_KEY)
+        request = youtube.playlistItems().list(
+            part="snippet",
+            maxResults="50",
+            playlistId=playlist_id
+        )
+        response = request.execute()
+        nextPageToken = response.get('nextPageToken')
+        while 'nextPageToken' in response:
+            nextPage = youtube.playlistItems().list(
+                part="snippet",
+                playlistId=playlist_id,
+                maxResults="50",
+                pageToken=nextPageToken
+            ).execute()
+            response['items'] = response['items'] + nextPage['items']
+            if 'nextPageToken' not in nextPage:
+                response.pop('nextPageToken', None)
+            else:
+                nextPageToken = nextPage['nextPageToken']
+        return response
+
     # TODO: Fix up with above functions
+
     @discord.app_commands.command(name="play", description="Plays a song from a link.")
     async def play(self, interaction, query: str):
         """
@@ -243,37 +283,98 @@ class Music(commands.Cog):
             await self.vc[guild_id].move_to(userChannel)
 
         if self.isValidYTURL(query):  # Valid youtubeURL
-            if self.isYTPlaylistURL(query):
-                await interaction.followup.send("Playlist URL detected. This feature is not yet implemented.")
-            elif self.isYTVideoURL(query):
-                songInfo = await self.getSongInfo(query, interaction)
-                if songInfo['stream_url'] == None:
-                    await interaction.followup.send("Could not download the song. Incorrect format, try some different keywords.")
+            if self.isYTPlaylistURL(query):  # Playlist URL
+                playListInfo = await self.getPlaylistInfo(query, interaction)
+                if playListInfo == None:
+                    await interaction.followup.send("Could not get playlist information. Please try again.")
                     return
+                # Get URL for each song in playlist
+                for item in playListInfo['items']:
+                    url = f"https://www.youtube.com/watch?v={item['snippet']['resourceId']['videoId']}"
+                    # Get Song Information -> {}
+                    songInfo = {"title": item['snippet']['title'], "artist": item['snippet']
+                                ['channelTitle'], "thumbnail": item['snippet']['thumbnails']['default']['url'], "url": url}
+                    self.musicQueue[guild_id].append(songInfo)
+
+                if self.is_playing[guild_id] == False:
+                    songInfo = self.musicQueue[guild_id][self.queueIndex[guild_id]]
+                    songInfo['stream_url'] = await self.getStreamURL(songInfo['url'], interaction)
+                    self.vc[guild_id].play(discord.FFmpegPCMAudio(
+                        songInfo['stream_url'], **self.FFMPEG_OPTIONS))
+                    self.is_playing[guild_id] = True
+                    self.is_paused[guild_id] = False
+                    await interaction.followup.send("Now playing!")
+                else:
+                    await interaction.followup.send("Playlist added to queue.")
+            elif self.isYTVideoURL(query):  # Video URL
+                # Get Song Information -> {}
+                try:
+                    songInfo = self.getSongInfo(query, interaction)
+                    songInfo['stream_url'] = await self.getStreamURL(query, interaction)
+                except Exception as e:
+                    print(e)
+                    await interaction.followup.send("Could not get song information. Please try again.")
+                    return
+                if songInfo['stream_url'] == None:
+                    await interaction.followup.send("Could not find stream URL. Please try again.")
+                    return
+
+                # Add to Queue / Play
                 self.musicQueue[guild_id].append(songInfo)
                 if self.is_playing[guild_id] == False:
-                    self.vc[guild_id].play(songInfo['stream_obj'])
+                    self.vc[guild_id].play(discord.FFmpegPCMAudio(
+                        songInfo['stream_url'], **self.FFMPEG_OPTIONS))
                     self.is_playing[guild_id] = True
                     self.is_paused[guild_id] = False
                     await interaction.followup.send("Now playing!")
             else:
-                await interaction.followup.send("Invalid Youtube URL. Please check your input and try again.")
+                await interaction.followup.send("Song added to queue.")
         else:  # Requires searching
-            urls = self.search_YT(query)
-            print(urls)
+            # Search YT -> [urls]
+            try:
+                urls = self.search_YT(query)
+            except:
+                await interaction.followup.send("Could not search YouTube. Please try again.")
+                return
+
             if len(urls) == 0:
-                await interaction.followup.send("No results found. Try Again.")
+                await interaction.followup.send("No Youtube Search results found. Try Again.")
                 return
-            songInfo = await self.getSongInfo(urls[0], interaction)
+
+            # Get Song Information -> {}
+            try:
+                songInfo = self.getSongInfo(urls[0], interaction)
+                songInfo['stream_url'] = await self.getStreamURL(urls[0], interaction)
+            except Exception as e:
+                print(e)
+                await interaction.followup.send("Could not get song information. Please try again.")
+                return
+
             if songInfo['stream_url'] == None:
-                await interaction.followup.send("Could not download the song. Incorrect format, try some different keywords.")
+                await interaction.followup.send("Could not find stream URL. Please try again.")
                 return
+
+            # Add to Queue / Play
             self.musicQueue[guild_id].append(songInfo)
             if self.is_playing[guild_id] == False:
-                self.vc[guild_id].play(songInfo['stream_obj'])
+                self.vc[guild_id].play(discord.FFmpegPCMAudio(
+                    songInfo['stream_url'], **self.FFMPEG_OPTIONS))
                 self.is_playing[guild_id] = True
                 self.is_paused[guild_id] = False
                 await interaction.followup.send("Now playing!")
+            else:
+                await interaction.followup.send("Song added to queue.")
+
+            # songInfo = await self.getSongInfo(urls[0], interaction)
+            # if songInfo['stream_url'] == None:
+            #     await interaction.followup.send("Could not download the song. Incorrect format, try some different keywords.")
+            #     return
+            # self.musicQueue[guild_id].append(songInfo)
+            # if self.is_playing[guild_id] == False:
+            #     self.vc[guild_id].play(songInfo['stream_obj'])
+            #     self.is_playing[guild_id] = True
+            #     self.is_paused[guild_id] = False
+            #     await interaction.followup.send("Now playing!")
 
     @discord.app_commands.command(name="pause", description="Pauses the current song.")
     async def pause(self, interaction: discord.Interaction) -> None:
@@ -363,11 +464,12 @@ class Music(commands.Cog):
                             value="Add some songs with /play or /add.")
             await interaction.response.send_message(embed=embed)
             return
+        # embed.thumbnail = self.musicQueue[guild_id][0]['thumbnail']
         for i in range(num):
             if i >= len(self.musicQueue[guild_id]):
                 break
             embed.add_field(
-                name=f"Song #{i+1}", value=f"{self.musicQueue[guild_id][i]['title']} - {self.musicQueue[guild_id][i]['channel_name']}", inline=False)
+                name=f"Song #{i+1}", value=f"{self.musicQueue[guild_id][i]['title']} - {self.musicQueue[guild_id][i]['artist']}", inline=False)
         await interaction.response.send_message(embed=embed)
 
     @discord.app_commands.command(name="clear", description="Clears the current music queue.")

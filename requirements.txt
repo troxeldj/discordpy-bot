@@ -2,3 +2,4 @@ discord.py[voice]
 yt-dlp
 python-dotenv
 requests
+google-api-python-client
