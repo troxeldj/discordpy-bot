@@ -1,4 +1,4 @@
 discord.py[voice]
 yt-dlp
 python-dotenv
-sqlite3
+requests
