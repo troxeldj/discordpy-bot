@@ -269,6 +269,7 @@ class Music(commands.Cog):
             ctx (discord.ext.commands.Context): The context object.
             url (str): The URL of the song to play.
         """
+        userChannel = interaction.user.voice.channel
         guild_id = int(interaction.guild.id)
         await interaction.response.defer()
         if interaction.user.voice == None:  # If user not in channel, send message and return
@@ -276,7 +277,6 @@ class Music(commands.Cog):
             return
 
         if self.vc[guild_id] == None:  # If bot not in channel, join channel
-            userChannel = interaction.user.voice.channel
             # VoiceClient Object
             self.vc[guild_id] = await userChannel.connect()
         else:  # If bot in diff channel, switch voice channel
@@ -310,7 +310,6 @@ class Music(commands.Cog):
                 # Get Song Information -> {}
                 try:
                     songInfo = self.getSongInfo(query, interaction)
-                    songInfo['stream_url'] = await self.getStreamURL(query, interaction)
                 except Exception as e:
                     print(e)
                     await interaction.followup.send("Could not get song information. Please try again.")
@@ -322,6 +321,10 @@ class Music(commands.Cog):
                 # Add to Queue / Play
                 self.musicQueue[guild_id].append(songInfo)
                 if self.is_playing[guild_id] == False:
+                    songInfo['stream_url'] = await self.getStreamURL(songInfo['url'], interaction)
+                    if songInfo['stream_url'] == None:
+                        await interaction.followup.send("Could not find stream URL. Please try again.")
+                        return
                     self.vc[guild_id].play(discord.FFmpegPCMAudio(
                         songInfo['stream_url'], **self.FFMPEG_OPTIONS))
                     self.is_playing[guild_id] = True
@@ -344,19 +347,18 @@ class Music(commands.Cog):
             # Get Song Information -> {}
             try:
                 songInfo = self.getSongInfo(urls[0], interaction)
-                songInfo['stream_url'] = await self.getStreamURL(urls[0], interaction)
             except Exception as e:
                 print(e)
                 await interaction.followup.send("Could not get song information. Please try again.")
                 return
 
-            if songInfo['stream_url'] == None:
-                await interaction.followup.send("Could not find stream URL. Please try again.")
-                return
-
             # Add to Queue / Play
             self.musicQueue[guild_id].append(songInfo)
             if self.is_playing[guild_id] == False:
+                songInfo['stream_url'] = await self.getStreamURL(urls[0], interaction)
+                if songInfo['stream_url'] == None:
+                    await interaction.followup.send("Could not find stream URL. Please try again.")
+                    return
                 self.vc[guild_id].play(discord.FFmpegPCMAudio(
                     songInfo['stream_url'], **self.FFMPEG_OPTIONS))
                 self.is_playing[guild_id] = True
