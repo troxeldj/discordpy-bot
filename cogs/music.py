@@ -253,6 +253,23 @@ class Music(commands.Cog):
                 nextPageToken = nextPage['nextPageToken']
         return response
 
+    async def _play(self, guild_id: int, interaction: discord.Interaction):
+        if self.is_playing[guild_id] == False:
+            songInfo = self.musicQueue[guild_id][self.queueIndex[guild_id]]
+            try:
+                songInfo['stream_url'] = await self.getStreamURL(songInfo['url'], interaction)
+                self.vc[guild_id].play(discord.FFmpegPCMAudio(
+                    songInfo['stream_url'], **self.FFMPEG_OPTIONS))
+                self.is_playing[guild_id] = True
+                self.is_paused[guild_id] = False
+            except:
+                await interaction.followup.send("Could not play the song. Please try again.")
+                return
+            await interaction.followup.send("Now playing!")
+
+        else:
+            await interaction.followup.send("Added to queue.")
+
     # TODO: Fix up with above functions
 
     @discord.app_commands.command(name="play", description="Plays a song from a link.")
@@ -263,7 +280,7 @@ class Music(commands.Cog):
         Currently Supports:
         - Youtube Video URL
         - Youtube Playlist URL - Not yet implemented
-        - Search Query - Not yet implemented
+        - Search Query
 
         Args:
             ctx (discord.ext.commands.Context): The context object.
@@ -296,16 +313,8 @@ class Music(commands.Cog):
                                 ['channelTitle'], "thumbnail": item['snippet']['thumbnails']['default']['url'], "url": url}
                     self.musicQueue[guild_id].append(songInfo)
 
-                if self.is_playing[guild_id] == False:
-                    songInfo = self.musicQueue[guild_id][self.queueIndex[guild_id]]
-                    songInfo['stream_url'] = await self.getStreamURL(songInfo['url'], interaction)
-                    self.vc[guild_id].play(discord.FFmpegPCMAudio(
-                        songInfo['stream_url'], **self.FFMPEG_OPTIONS))
-                    self.is_playing[guild_id] = True
-                    self.is_paused[guild_id] = False
-                    await interaction.followup.send("Now playing!")
-                else:
-                    await interaction.followup.send("Playlist added to queue.")
+                await self._play(guild_id, interaction)
+
             elif self.isYTVideoURL(query):  # Video URL
                 # Get Song Information -> {}
                 try:
@@ -320,16 +329,7 @@ class Music(commands.Cog):
 
                 # Add to Queue / Play
                 self.musicQueue[guild_id].append(songInfo)
-                if self.is_playing[guild_id] == False:
-                    songInfo['stream_url'] = await self.getStreamURL(songInfo['url'], interaction)
-                    if songInfo['stream_url'] == None:
-                        await interaction.followup.send("Could not find stream URL. Please try again.")
-                        return
-                    self.vc[guild_id].play(discord.FFmpegPCMAudio(
-                        songInfo['stream_url'], **self.FFMPEG_OPTIONS))
-                    self.is_playing[guild_id] = True
-                    self.is_paused[guild_id] = False
-                    await interaction.followup.send("Now playing!")
+                await self._play(guild_id, interaction)
             else:
                 await interaction.followup.send("Song added to queue.")
         else:  # Requires searching
@@ -354,29 +354,7 @@ class Music(commands.Cog):
 
             # Add to Queue / Play
             self.musicQueue[guild_id].append(songInfo)
-            if self.is_playing[guild_id] == False:
-                songInfo['stream_url'] = await self.getStreamURL(urls[0], interaction)
-                if songInfo['stream_url'] == None:
-                    await interaction.followup.send("Could not find stream URL. Please try again.")
-                    return
-                self.vc[guild_id].play(discord.FFmpegPCMAudio(
-                    songInfo['stream_url'], **self.FFMPEG_OPTIONS))
-                self.is_playing[guild_id] = True
-                self.is_paused[guild_id] = False
-                await interaction.followup.send("Now playing!")
-            else:
-                await interaction.followup.send("Song added to queue.")
-
-            # songInfo = await self.getSongInfo(urls[0], interaction)
-            # if songInfo['stream_url'] == None:
-            #     await interaction.followup.send("Could not download the song. Incorrect format, try some different keywords.")
-            #     return
-            # self.musicQueue[guild_id].append(songInfo)
-            # if self.is_playing[guild_id] == False:
-            #     self.vc[guild_id].play(songInfo['stream_obj'])
-            #     self.is_playing[guild_id] = True
-            #     self.is_paused[guild_id] = False
-            #     await interaction.followup.send("Now playing!")
+            await self._play(guild_id, interaction)
 
     @discord.app_commands.command(name="pause", description="Pauses the current song.")
     async def pause(self, interaction: discord.Interaction) -> None:
