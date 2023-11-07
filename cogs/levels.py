@@ -124,3 +124,20 @@ class Levels(commands.Cog):
             embed.add_field(
                 name=row[0], value=f"Level: {row[2]}\nExperience: {row[1]}", inline=False)
         await interaction.response.send_message(embed=embed)
+
+    @discord.app_commands.command(name="rank", description="Shows your rank on the server.")
+    async def rank(self, interaction):
+        guild_id = interaction.guild.id
+        cursor = self.connection.execute(
+            "SELECT user_name, experience, current_lvl FROM levels WHERE guild_id = ? ORDER BY experience DESC", (guild_id,))
+        rows = cursor.fetchall()
+        embed = discord.Embed(title="Rank", color=discord.Colour.green(
+        ), timestamp=datetime.datetime.utcnow())
+        rank = 1
+        for row in rows:
+            if row[0] == interaction.user.name:
+                break
+            rank += 1
+        embed.add_field(
+            name="Rank", value=rank)
+        await interaction.response.send_message(embed=embed)

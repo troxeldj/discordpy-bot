@@ -166,3 +166,10 @@ class Economy(commands.Cog):
         for row in cursor:
             embed.add_field(name=row[0], value=row[1])
         await interaction.response.send_message(embed=embed)
+
+    @discord.app_commands.command(name="beg", description="Beg for coins.")
+    async def beg(self, interaction: discord.Interaction, member: discord.Member):
+        if member == None:
+            await interaction.response.send_message("Member not found.")
+            return
+        await interaction.response.send_message(f"{member.mention} has been begged for coins by {interaction.user.name}.")
