@@ -234,7 +234,8 @@ class Utility(commands.Cog):
             name="/remind", value="Reminds you of something.", inline=False)
         embed.add_field(
             name="/weather", value="Displays the weather given a city.", inline=False)
-        embed.add_field(name="/play", value="Plays a song.", inline=False)
+        embed.add_field(
+            name="/play", value="Plays a song from yt link/playlist or query.", inline=False)
         embed.add_field(name="/pause", value="Pauses the song.", inline=False)
         embed.add_field(
             name="/resume", value="Resumes the song.", inline=False)

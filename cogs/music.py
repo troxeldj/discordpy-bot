@@ -7,6 +7,7 @@ from yt_dlp import YoutubeDL
 from dotenv import load_dotenv
 from os import getenv
 import googleapiclient.discovery
+from asyncio import run_coroutine_threadsafe
 
 load_dotenv()
 YOUTUBE_API_KEY = getenv('YOUTUBE_API_KEY')
@@ -225,6 +226,7 @@ class Music(commands.Cog):
         response = request.execute()
         if response:
             return {"video_id": response['items'][0]['id'], "url": url, "title": response['items'][0]['snippet']['title'], "artist": response['items'][0]['snippet']['channelTitle'], "thumbnail": response['items'][0]['snippet']['thumbnails']['default']['url']}
+        return {}
 
     async def getPlaylistInfo(self, url: str, interaction: discord.Interaction) -> list:
         playlist_id = url.split("=")[1]
@@ -254,11 +256,10 @@ class Music(commands.Cog):
     async def _play(self, guild_id: int, interaction: discord.Interaction):
         if self.is_playing[guild_id] == False:
             songInfo = self.musicQueue[guild_id][self.queueIndex[guild_id]]
-            el = asyncio.get_event_loop()
             try:
                 songInfo['stream_url'] = await self.getStreamURL(songInfo['url'], interaction)
                 self.vc[guild_id].play(discord.FFmpegPCMAudio(
-                    songInfo['stream_url'], **self.FFMPEG_OPTIONS), after=lambda e: el.create_task(self._playNext(guild_id, interaction)))
+                    songInfo['stream_url'], **self.FFMPEG_OPTIONS), after=lambda e: asyncio.run_coroutine_threadsafe(self._playNext(guild_id, interaction), self.bot.loop))
                 self.is_playing[guild_id] = True
                 self.is_paused[guild_id] = False
             except:
@@ -270,6 +271,7 @@ class Music(commands.Cog):
             await interaction.followup.send("Added to queue.")
 
     async def _playNext(self, guild_id: int, interaction: discord.Interaction):
+        self.is_playing[guild_id] = False
         if not self.musicQueue[guild_id][self.queueIndex[guild_id] + 1]:
             await interaction.response.send_message("No more songs in queue.")
             return
@@ -292,13 +294,12 @@ class Music(commands.Cog):
             ctx (discord.ext.commands.Context): The context object.
             url (str): The URL of the song to play.
         """
-        userChannel = interaction.user.voice.channel
         guild_id = int(interaction.guild.id)
         await interaction.response.defer()
         if interaction.user.voice == None:  # If user not in channel, send message and return
             await interaction.followup.send("You must be connected to a voice channel.")
             return
-
+        userChannel = interaction.user.voice.channel  # VoiceChannel Object
         if self.vc[guild_id] == None:  # If bot not in channel, join channel
             # VoiceClient Object
             self.vc[guild_id] = await userChannel.connect()
@@ -308,7 +309,7 @@ class Music(commands.Cog):
         if self.isValidYTURL(query):  # Valid youtubeURL
             if self.isYTPlaylistURL(query):  # Playlist URL
                 playListInfo = await self.getPlaylistInfo(query, interaction)
-                if playListInfo == None:
+                if 'items' not in playListInfo or playListInfo == None:
                     await interaction.followup.send("Could not get playlist information. Please try again.")
                     return
                 # Get URL for each song in playlist
@@ -317,28 +318,29 @@ class Music(commands.Cog):
                     # Get Song Information -> {}
                     songInfo = {"title": item['snippet']['title'], "artist": item['snippet']
                                 ['channelTitle'], "thumbnail": item['snippet']['thumbnails']['default']['url'], "url": url}
-                    self.musicQueue[guild_id].append(songInfo)
 
                 # Add to Queue / Play
+                self.musicQueue[guild_id].append(songInfo)
                 await self._play(guild_id, interaction)
 
             elif self.isYTVideoURL(query):  # Video URL
                 # Get Song Information -> {}
                 try:
                     songInfo = self.getSongInfo(query, interaction)
+                    songInfo['stream_url'] = await self.getStreamURL(query, interaction)
                 except Exception as e:
                     print(e)
                     await interaction.followup.send("Could not get song information. Please try again.")
                     return
-                if songInfo['stream_url'] == None:
+
+                if 'stream_url' not in songInfo or songInfo == {}:
                     await interaction.followup.send("Could not find stream URL. Please try again.")
                     return
 
                 # Add to Queue / Play
                 self.musicQueue[guild_id].append(songInfo)
                 await self._play(guild_id, interaction)
-            else:
-                await interaction.followup.send("Song added to queue.")
+
         else:  # Requires searching
             # Search YT -> [urls]
             try:
@@ -354,9 +356,14 @@ class Music(commands.Cog):
             # Get Song Information -> {}
             try:
                 songInfo = self.getSongInfo(urls[0], interaction)
+                songInfo['stream_url'] = await self.getStreamURL(urls[0], interaction)
             except Exception as e:
                 print(e)
                 await interaction.followup.send("Could not get song information. Please try again.")
+                return
+
+            if 'stream_url' not in songInfo or songInfo['stream_url'] == None:
+                await interaction.followup.send("Could not find stream URL. Please try again.")
                 return
 
             # Add to Queue / Play

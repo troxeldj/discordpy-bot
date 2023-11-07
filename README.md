@@ -32,7 +32,7 @@ Steps to Use:
 
 ### Music
 
-**Play**: Plays music from a youtube link (Query string to be implemented).
+**Play**: Plays music from a youtube link / youtube playlist or search query
 
 **Pause**: Pauses the playing song.
 
@@ -91,11 +91,13 @@ NOTE: Requires an openweathermap API Key in .env called WEATHER_API_KEY
 2. yt-dlp - [GitHub](https://github.com/yt-dlp/yt-dlp)
 3. python-dotenv - [GitHub](https://github.com/yt-dlp/yt-dlp)
 4. OpenWeatherMap API - [Site](https://openweathermap.org/api)
+5. google-api-python-client and Youtube Data API [Github](https://github.com/googleapis/google-api-python-client)
+6. SQLITE
 
 ## Todo
 
-- Youtube Playlists.
-- Youtube Query Strings (Fetch links using string).
+- ~~Youtube Playlists.~~
+- ~~Youtube Query Strings (Fetch links using string).~~
 - Look into Lavalink.
 - Add Features and Improve Economy Commands.
 - Add additional utility commands.
