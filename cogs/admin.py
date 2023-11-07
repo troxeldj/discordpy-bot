@@ -51,7 +51,7 @@ class Admin(commands.Cog):
 
     @discord.app_commands.command(name="announce", description="Announces a message to a channel.")
     @discord.app_commands.check(is_admin)
-    async def announce(self, interaction: discord.Interaction, channel: str, message: str) -> None:
+    async def announce(self, interaction: discord.Interaction, channel: discord.TextChannel, message: str) -> None:
         """
         Announces a message to a channel.
 
@@ -164,6 +164,7 @@ class Admin(commands.Cog):
         if duration == None or duration.isnumeric() == False:
             await interaction.response.send_message("Invalid duration.")
             return
+
         if int(duration) < 0 or int(duration) > 604800:
             await interaction.response.send_message("Duration must be between 0 and 604800 seconds.")
             return

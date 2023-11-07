@@ -260,8 +260,14 @@ class Utility(commands.Cog):
             name="/level", value="Displays your level.", inline=False)
         embed.add_field(name="/lvlboard",
                         value="Displays the level leaderboard.", inline=False)
+        embed.add_field(
+            name="/rank", value="Displays your server rank according to level.", inline=False)
         embed.add_field(name="/announce (ADMIN ONLY)",
                         value="Announces a message to a channel.", inline=False)
         embed.add_field(name="/shutdown (ADMIN ONLY)",
                         value="Shuts down the bot.", inline=False)
+        embed.add_field(name="/slowmode (ADMIN ONLY)",
+                        value="Sets the slowmode for a channel.", inline=False)
+        embed.add_field(name="/clean (ADMIN ONLY)",
+                        value="Deletes a specified number of messages from a channel.", inline=False)
         await interaction.response.send_message(embed=embed)

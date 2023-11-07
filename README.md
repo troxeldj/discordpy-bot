@@ -17,7 +17,7 @@ Steps to Use:
 
 ## Cogs
 
-### Admin
+### Admin (Requires admin permissions on server)
 
 **Shutdown**: Shuts down the bot.
 
@@ -26,6 +26,10 @@ Steps to Use:
 **Kick**: Kicks a user
 
 **Ban**: Bans a user
+
+**Slowmode**: Sets the slowmode duration for a text channel.
+
+**Clean**: Cleans a user-specified number of messages from a channel.
 
 **Timeout**: Times out a user for a user-defined number of seconds.
 
@@ -78,11 +82,15 @@ NOTE: Requires an openweathermap API Key in .env called WEATHER_API_KEY
 
 **Leaderboard**: Displays the top 10 richest members in the guild.
 
+**Beg**: ALlows the user to beg for money from another member. Mentions the user.
+
 ### Levels
 
 **Level**: Retrieves and displays the user's current level
 
 **Lvlboard**: Displays the 10 members with the highest levels on the guild.
+
+**Rank**: Displays the server rank for that user's level.
 
 ## Technologies Used
 
