@@ -1,10 +1,8 @@
 import discord
 from discord.ext import commands
 import asyncio
-from asyncio import run_coroutine_threadsafe
-from urllib import parse, request
+from urllib import parse
 import re
-import json
 from yt_dlp import YoutubeDL
 from dotenv import load_dotenv
 from os import getenv
@@ -256,10 +254,11 @@ class Music(commands.Cog):
     async def _play(self, guild_id: int, interaction: discord.Interaction):
         if self.is_playing[guild_id] == False:
             songInfo = self.musicQueue[guild_id][self.queueIndex[guild_id]]
+            el = asyncio.get_event_loop()
             try:
                 songInfo['stream_url'] = await self.getStreamURL(songInfo['url'], interaction)
                 self.vc[guild_id].play(discord.FFmpegPCMAudio(
-                    songInfo['stream_url'], **self.FFMPEG_OPTIONS))
+                    songInfo['stream_url'], **self.FFMPEG_OPTIONS), after=lambda e: el.create_task(self._playNext(guild_id, interaction)))
                 self.is_playing[guild_id] = True
                 self.is_paused[guild_id] = False
             except:
@@ -270,6 +269,13 @@ class Music(commands.Cog):
         else:
             await interaction.followup.send("Added to queue.")
 
+    async def _playNext(self, guild_id: int, interaction: discord.Interaction):
+        if not self.musicQueue[guild_id][self.queueIndex[guild_id] + 1]:
+            await interaction.response.send_message("No more songs in queue.")
+            return
+        self.queueIndex[guild_id] += 1
+        await self._play(guild_id, interaction)
+
     # TODO: Fix up with above functions
 
     @discord.app_commands.command(name="play", description="Plays a song from a link.")
@@ -279,7 +285,7 @@ class Music(commands.Cog):
 
         Currently Supports:
         - Youtube Video URL
-        - Youtube Playlist URL - Not yet implemented
+        - Youtube Playlist URL
         - Search Query
 
         Args:
@@ -313,6 +319,7 @@ class Music(commands.Cog):
                                 ['channelTitle'], "thumbnail": item['snippet']['thumbnails']['default']['url'], "url": url}
                     self.musicQueue[guild_id].append(songInfo)
 
+                # Add to Queue / Play
                 await self._play(guild_id, interaction)
 
             elif self.isYTVideoURL(query):  # Video URL
