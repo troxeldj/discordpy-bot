@@ -2,6 +2,7 @@ from discord.ext import commands
 import discord
 import datetime
 
+
 class Admin(commands.Cog):
     def __init__(self, bot: discord.Interaction) -> None:
         """
@@ -24,12 +25,12 @@ class Admin(commands.Cog):
         else:
             await interaction.response.send_message("You do not have permission to use this command.")
             return False
-    
+
     @commands.Cog.listener()
     async def on_ready(self) -> None:
         """
         Runs when the cog is ready.
-        
+
         prints a message when the cog is ready.
 
 
@@ -47,7 +48,7 @@ class Admin(commands.Cog):
         """
         await interaction.response.send_message("Shutting down...")
         await self.bot.close()
-    
+
     @discord.app_commands.command(name="announce", description="Announces a message to a channel.")
     @discord.app_commands.check(is_admin)
     async def announce(self, interaction: discord.Interaction, channel: str, message: str) -> None:
@@ -64,7 +65,7 @@ class Admin(commands.Cog):
             await interaction.response.send_message("Channel not found.")
             return
         await channel.send(message)
-        await interaction.response.send_message("Announcement sent.")                
+        await interaction.response.send_message("Announcement sent.")
 
     @discord.app_commands.command(name="kick", description="Kicks a user.")
     @discord.app_commands.check(is_admin)
@@ -104,11 +105,11 @@ class Admin(commands.Cog):
     @discord.app_commands.check(is_admin)
     async def timeout(self, interaction, member: discord.Member, duration: str) -> None:
         """
-        Bans a user from the server.
+        Timesout a user.
 
         Args:
             interaction (discord.Interaction): The interaction object.
-            member (discord.Member): The member to kick.
+            member (discord.Member): The member to timeout.
             duration (str): The duration of the timeout.
         """
         if member == None:
@@ -117,13 +118,61 @@ class Admin(commands.Cog):
         if duration == None or duration.isnumeric() == False:
             await interaction.response.send_message("Invalid duration.")
             return
+
+        if duration < 0 or duration > 604800:
+            await interaction.response.send_message("Duration must be between 0 and 604800 seconds.")
+            return
+
         duration = datetime.timedelta(seconds=int(duration))
         await member.timeout(duration)
         await interaction.response.send_message(f"{member} has been timed out for {duration} seconds.")
-    
+
+    @discord.app_commands.command(name="clean", description="Cleans a channel.")
+    @discord.app_commands.check(is_admin)
+    async def clean(self, interaction, channel: discord.TextChannel, amount: str) -> None:
+        """
+        Cleans a channel.
+
+        Args:
+            interaction (discord.Interaction): The interaction object.
+            channel (discord.TextChannel): The channel to clean.
+            amount (int): The amount of messages to delete.
+        """
+        if channel == None:
+            await interaction.response.send_message("Channel not found.")
+            return
+        if amount == None or amount.isnumeric() == False:
+            await interaction.response.send_message("Invalid amount.")
+            return
+        await interaction.response.send_message(f"Deleting {amount} messages...")
+        await channel.purge(limit=int(amount))
+
+    @discord.app_commands.command(name="slowmode", description="Sets the slowmode of a channel.")
+    @discord.app_commands.check(is_admin)
+    async def slowmode(self, interaction, channel: discord.TextChannel, duration: str) -> None:
+        """
+        Sets the slowmode of a channel.
+
+        Args:
+            interaction (discord.Interaction): The interaction object.
+            channel (discord.TextChannel): The channel to set the slowmode of.
+            duration (str): The duration of the slowmode.
+        """
+        if channel == None:
+            await interaction.response.send_message("Channel not found.")
+            return
+        if duration == None or duration.isnumeric() == False:
+            await interaction.response.send_message("Invalid duration.")
+            return
+        if int(duration) < 0 or int(duration) > 604800:
+            await interaction.response.send_message("Duration must be between 0 and 604800 seconds.")
+            return
+        await channel.edit(slowmode_delay=duration)
+        await interaction.response.send_message(f"Slowmode set to {duration} seconds.")
+
     # @commands.command()
     # async def ban(self, ctx, member, reason):
     #     try:
-    #         await ctx.guild.ban(member, reason=reason)  
+    #         await ctx.guild.ban(member, reason=reason)
     #     except:
     #         await ctx.send("Could not ban user.")
