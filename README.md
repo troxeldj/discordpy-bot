@@ -105,6 +105,7 @@ NOTE: Requires an openweathermap API Key in .env called WEATHER_API_KEY
 
 - ~~Youtube Playlists.~~
 - ~~Youtube Query Strings (Fetch links using string).~~
+- Implement Spotify API and converting Spotify playlists to Youtube
 - Look into Lavalink.
 - Add Features and Improve Economy Commands.
 - Add additional utility commands.
