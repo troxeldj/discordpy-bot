@@ -12,9 +12,8 @@ Steps to Use:
 2. Create .env in root of project.
 3. Add Params to a .env file (Use the example).
 4. execute "pip install -r requirements.txt"
-5. Run main.py
-6. Invite bot to your server(s).
-7. Run main.py and allow the program to import commands.
+5. Invite bot to your server(s).
+6. Run main.py and allow the program to import commands.
 
 ## Cogs
 
