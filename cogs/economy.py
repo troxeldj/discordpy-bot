@@ -9,9 +9,9 @@ DAILY_REWARD = 200
 
 
 class Economy(commands.Cog):
-    def __init__(self, bot):
+    def __init__(self, bot: commands.Bot, dbConnection: sqlite3.Connection):
         self.bot = bot
-        self.connection = sqlite3.connect('economy.db')
+        self.connection = dbConnection
         print("Econ DB Connection Established")
 
     def __del__(self):

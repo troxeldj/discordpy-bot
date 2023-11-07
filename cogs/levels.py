@@ -10,9 +10,9 @@ MESSAGE_EXPERIENCE = 5
 
 
 class Levels(commands.Cog):
-    def __init__(self, bot):
+    def __init__(self, bot: commands.Bot, dbConnection: sqlite3.Connection):
         self.bot = bot
-        self.connection = sqlite3.connect('leveling.db')
+        self.connection = dbConnection
         print("Levels DB Connection Established")
 
     def __del__(self):
