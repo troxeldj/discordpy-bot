@@ -10,3 +10,4 @@ core
 .env
 economy.db
 leveling.db
+database.db
