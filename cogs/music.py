@@ -59,22 +59,6 @@ class Music(commands.Cog):
             'options': '-vn'
         }
 
-    def now_playing_embed(self, interaction: discord.Interaction, song: dict) -> discord.Embed:
-        title = song['title']
-        link = song['link']
-        thumbnail = song['thumbnail']
-        author = interaction.user
-        avatar = author.avatar
-
-        embed = discord.Embed(
-            title="Now Playing",
-            description=f'[{title}]({link})',
-            colour=self.embedBlue,
-        )
-        embed.set_thumbnail(url=thumbnail)
-        embed.set_footer(text=f'Song added by: {str(author)}', icon_url=avatar)
-        return embed
-
     @commands.Cog.listener()
     async def on_ready(self):
         """
@@ -476,6 +460,7 @@ class Music(commands.Cog):
         Args:
             interaction (discord.Interaction): The interaction object.
         """
+        await interaction.response.defer()
         if self.is_playing[guild_id] == True:
             self.vc[guild_id].stop()
             self.is_playing[guild_id] = False
@@ -483,7 +468,7 @@ class Music(commands.Cog):
         guild_id = int(interaction.guild.id)
         self.musicQueue[guild_id] = []
         self.queueIndex[guild_id] = 0
-        await interaction.response.send_message("Music queue cleared!")
+        await interaction.followup.send("Music queue cleared!")
 
     @discord.app_commands.command(name="skip", description="Skips the current song.")
     async def skip(self, interaction: discord.Interaction):
@@ -496,9 +481,27 @@ class Music(commands.Cog):
         await interaction.response.defer()
         guild_id = int(interaction.guild.id)
         if self.queueIndex[guild_id] + 1 >= len(self.musicQueue[guild_id]):
-            await interaction.followup("No more songs in queue.")
+            await interaction.followup.send("No more songs in queue.")
             return
         self.queueIndex[guild_id] += 1
+        self.vc[guild_id].stop()
+        self.is_playing[guild_id] = False
+        await self._play(guild_id, interaction)
+
+    @discord.app_commands.command(name="prev", description="Plays the previous song.")
+    async def prev(self, interaction: discord.Interaction):
+        """
+        Plays the previous song.
+
+        Args:
+            interaction (discord.Interaction): The interaction object.
+        """
+        await interaction.response.defer()
+        guild_id = int(interaction.guild.id)
+        if self.queueIndex[guild_id] - 1 < 0:
+            await interaction.followup.send("No previous songs in queue.")
+            return
+        self.queueIndex[guild_id] -= 1
         self.vc[guild_id].stop()
         self.is_playing[guild_id] = False
         await self._play(guild_id, interaction)
