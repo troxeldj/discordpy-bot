@@ -257,12 +257,14 @@ class Music(commands.Cog):
         if self.is_playing[guild_id] == False:
             songInfo = self.musicQueue[guild_id][self.queueIndex[guild_id]]
             try:
+                self.is_playing[guild_id] = True
+                self.is_paused[guild_id] = False
                 songInfo['stream_url'] = await self.getStreamURL(songInfo['url'], interaction)
                 self.vc[guild_id].play(discord.FFmpegPCMAudio(
                     songInfo['stream_url'], **self.FFMPEG_OPTIONS), after=lambda e: asyncio.run_coroutine_threadsafe(self._playNext(guild_id, interaction), self.bot.loop))
-                self.is_playing[guild_id] = True
-                self.is_paused[guild_id] = False
             except:
+                self.is_playing[guild_id] = False
+                self.is_paused[guild_id] = False
                 await interaction.followup.send("Could not play the song. Please try again.")
                 return
             await interaction.followup.send("Now playing!")
@@ -474,7 +476,29 @@ class Music(commands.Cog):
         Args:
             interaction (discord.Interaction): The interaction object.
         """
+        if self.is_playing[guild_id] == True:
+            self.vc[guild_id].stop()
+            self.is_playing[guild_id] = False
+            self.is_paused[guild_id] = False
         guild_id = int(interaction.guild.id)
         self.musicQueue[guild_id] = []
         self.queueIndex[guild_id] = 0
         await interaction.response.send_message("Music queue cleared!")
+
+    @discord.app_commands.command(name="skip", description="Skips the current song.")
+    async def skip(self, interaction: discord.Interaction):
+        """
+        Skips the current song.
+
+        Args:
+            interaction (discord.Interaction): The interaction object.
+        """
+        await interaction.response.defer()
+        guild_id = int(interaction.guild.id)
+        if self.queueIndex[guild_id] + 1 >= len(self.musicQueue[guild_id]):
+            await interaction.followup("No more songs in queue.")
+            return
+        self.queueIndex[guild_id] += 1
+        self.vc[guild_id].stop()
+        self.is_playing[guild_id] = False
+        await self._play(guild_id, interaction)
