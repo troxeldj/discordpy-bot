@@ -247,7 +247,8 @@ class Music(commands.Cog):
                 songInfo['stream_url'] = await self.getStreamURL(songInfo['url'], interaction)
                 self.vc[guild_id].play(discord.FFmpegPCMAudio(
                     songInfo['stream_url'], **self.FFMPEG_OPTIONS), after=lambda e: asyncio.run_coroutine_threadsafe(self._playNext(guild_id, interaction), self.bot.loop))
-            except:
+            except Exception as e:
+                print(e)
                 self.is_playing[guild_id] = False
                 self.is_paused[guild_id] = False
                 await interaction.followup.send("Could not play the song. Please try again.")
