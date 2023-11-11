@@ -8,6 +8,8 @@ from dotenv import load_dotenv
 from os import getenv
 import googleapiclient.discovery
 from asyncio import run_coroutine_threadsafe
+from random import shuffle
+import json
 
 load_dotenv()
 YOUTUBE_API_KEY = getenv('YOUTUBE_API_KEY')
@@ -173,7 +175,7 @@ class Music(commands.Cog):
         Returns:
             bool: True if the URL is a YouTube video URL, False otherwise.
         """
-        return re.match(r"https:\/\/(www\.){0,1}youtube.com/watch.*", url) != None
+        return re.match(r"https:\/\/(www\.){0,1}youtube.com\/watch.*", url) != None
 
     def isYTPlaylistURL(self, url: str) -> bool:
         """
@@ -185,7 +187,7 @@ class Music(commands.Cog):
         Returns:
             bool: True if the URL is a YouTube playlist URL, False otherwise.
         """
-        return re.match(r"https:\/\/(www\.){0,1}youtube.com/playlist.*", url) != None
+        return re.match(r"https:\/\/(www\.){0,1}youtube.com\/playlist.*", url) != None
 
     async def getStreamURL(self, url: str, interaction: discord.Interaction) -> str:
         with YoutubeDL(self.YTDL_OPTIONS) as ydl:
@@ -212,16 +214,15 @@ class Music(commands.Cog):
             return {"video_id": response['items'][0]['id'], "url": url, "title": response['items'][0]['snippet']['title'], "artist": response['items'][0]['snippet']['channelTitle'], "thumbnail": response['items'][0]['snippet']['thumbnails']['default']['url']}
         return {}
 
-    async def getPlaylistInfo(self, url: str, interaction: discord.Interaction) -> list:
+    def getPlaylistInfo(self, url: str, interaction: discord.Interaction) -> list:
         playlist_id = url.split("=")[1]
         youtube = googleapiclient.discovery.build(
             "youtube", "v3", developerKey=YOUTUBE_API_KEY)
-        request = youtube.playlistItems().list(
+        response = youtube.playlistItems().list(
             part="snippet",
             maxResults="50",
             playlistId=playlist_id
-        )
-        response = request.execute()
+        ).execute()
         nextPageToken = response.get('nextPageToken')
         while 'nextPageToken' in response:
             nextPage = youtube.playlistItems().list(
@@ -294,7 +295,9 @@ class Music(commands.Cog):
 
         if self.isValidYTURL(query):  # Valid youtubeURL
             if self.isYTPlaylistURL(query):  # Playlist URL
-                playListInfo = await self.getPlaylistInfo(query, interaction)
+                playListInfo = self.getPlaylistInfo(query, interaction)
+                print(len(playListInfo['items']))
+                print(json.dumps(playListInfo))
                 if 'items' not in playListInfo or playListInfo == None:
                     await interaction.followup.send("Could not get playlist information. Please try again.")
                     return
@@ -303,12 +306,10 @@ class Music(commands.Cog):
                     url = f"https://www.youtube.com/watch?v={item['snippet']['resourceId']['videoId']}"
                     # Get Song Information -> {}
                     songInfo = {"title": item['snippet']['title'], "artist": item['snippet']
-                                ['channelTitle'], "thumbnail": item['snippet']['thumbnails']['default']['url'], "url": url}
-
-                # Add to Queue / Play
-                self.musicQueue[guild_id].append(songInfo)
+                                ['videoOwnerChannelTitle'], "thumbnail": item['snippet']['thumbnails']['default']['url'], "url": url}
+                    # Add to Queue / Play
+                    self.musicQueue[guild_id].append(songInfo)
                 await self._play(guild_id, interaction)
-
             elif self.isYTVideoURL(query):  # Video URL
                 # Get Song Information -> {}
                 try:
@@ -318,15 +319,12 @@ class Music(commands.Cog):
                     print(e)
                     await interaction.followup.send("Could not get song information. Please try again.")
                     return
-
                 if 'stream_url' not in songInfo or songInfo == {}:
                     await interaction.followup.send("Could not find stream URL. Please try again.")
                     return
-
                 # Add to Queue / Play
                 self.musicQueue[guild_id].append(songInfo)
                 await self._play(guild_id, interaction)
-
         else:  # Requires searching
             # Search YT -> [urls]
             try:
@@ -423,7 +421,7 @@ class Music(commands.Cog):
                 return
 
     @discord.app_commands.command(name="queue", description="Displays the current music queue.")
-    async def queue(self, interaction: discord.Interaction, num: str = "10") -> None:
+    async def queue(self, interaction: discord.Interaction, num: str) -> None:
         """
         Displays the current music queue.
 
@@ -431,11 +429,11 @@ class Music(commands.Cog):
             interaction (discord.Interaction): The interaction object.
             num (str, optional): The number of songs to display. Defaults to 10.
         """
-        guild_id = int(interaction.guild.id)
-        if not num.isnumeric():
-            await interaction.response.send_message("Invalid argument. Please enter a number.")
+        if (not num.isnumeric()) or num == "" or int(num) < 1:
+            await interaction.response.send_message("Invalid number of songs.")
             return
         num = int(num)
+        guild_id = int(interaction.guild.id)
         embed = discord.Embed(
             title="Music Queue",
             colour=discord.Colour.blue())
@@ -445,11 +443,14 @@ class Music(commands.Cog):
             await interaction.response.send_message(embed=embed)
             return
         # embed.thumbnail = self.musicQueue[guild_id][0]['thumbnail']
-        for i in range(num):
-            if i >= len(self.musicQueue[guild_id]):
+        for i, song in enumerate(self.musicQueue[guild_id][self.queueIndex[guild_id]:]):
+            if i == 0:
+                embed.add_field(name=f"{i+1}. {song['title']} (Now Playing)",
+                                value=f"Artist: {song['artist']}\nURL: {song['url']}", inline=False)
+            if i >= num:
                 break
-            embed.add_field(
-                name=f"Song #{i+1}", value=f"{self.musicQueue[guild_id][i]['title']} - {self.musicQueue[guild_id][i]['artist']}", inline=False)
+            embed.add_field(name=f"{i+1}. {song['title']}",
+                            value=f"Artist: {song['artist']}\nURL: {song['url']}", inline=False)
         await interaction.response.send_message(embed=embed)
 
     @discord.app_commands.command(name="clear", description="Clears the current music queue.")
@@ -460,6 +461,7 @@ class Music(commands.Cog):
         Args:
             interaction (discord.Interaction): The interaction object.
         """
+        guild_id = int(interaction.guild.id)
         await interaction.response.defer()
         if self.is_playing[guild_id] == True:
             self.vc[guild_id].stop()
@@ -505,3 +507,23 @@ class Music(commands.Cog):
         self.vc[guild_id].stop()
         self.is_playing[guild_id] = False
         await self._play(guild_id, interaction)
+
+    @discord.app_commands.command(name="shuffle", description="Shuffles the current music queue.")
+    async def shuffle(self, interaction: discord.Interaction):
+        """
+        Shuffles the current music queue.
+
+        Args:
+            interaction (discord.Interaction): The interaction object.
+        """
+        await interaction.response.defer()
+        guild_id = int(interaction.guild.id)
+        if len(self.musicQueue[guild_id]) == 0:
+            await interaction.followup.send("No songs in queue.")
+            return
+        if self.is_playing[guild_id] == True:
+            self.vc[guild_id].stop()
+            self.is_playing[guild_id] = False
+            self.is_paused[guild_id] = False
+        shuffle(self.musicQueue[guild_id][self.queueIndex[guild_id]:])
+        await interaction.followup.send("Queue shuffled!")
