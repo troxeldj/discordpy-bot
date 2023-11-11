@@ -423,7 +423,7 @@ class Music(commands.Cog):
                 return
 
     @discord.app_commands.command(name="queue", description="Displays the current music queue.")
-    async def queue(self, interaction: discord.Interaction, num: str = 10) -> None:
+    async def queue(self, interaction: discord.Interaction, num: str = "10") -> None:
         """
         Displays the current music queue.
 
