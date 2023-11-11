@@ -330,7 +330,8 @@ class Music(commands.Cog):
             # Search YT -> [urls]
             try:
                 urls = self.search_YT(query)
-            except:
+            except Exception as e:
+                print(e)
                 await interaction.followup.send("Could not search YouTube. Please try again.")
                 return
 
@@ -448,6 +449,7 @@ class Music(commands.Cog):
             if i == 0:
                 embed.add_field(name=f"{i+1}. {song['title']} (Now Playing)",
                                 value=f"Artist: {song['artist']}\nURL: {song['url']}", inline=False)
+                continue
             if i >= num:
                 break
             embed.add_field(name=f"{i+1}. {song['title']}",
