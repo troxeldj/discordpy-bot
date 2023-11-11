@@ -11,3 +11,4 @@ core
 economy.db
 leveling.db
 database.db
+nohup.out
