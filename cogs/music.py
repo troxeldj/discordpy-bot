@@ -153,18 +153,6 @@ class Music(commands.Cog):
             return []
         return [f"https://www.youtube.com/watch?v={item['id']['videoId']}" for item in response['items']]
 
-    def isValidYTURL(self, url: str) -> bool:
-        """
-        Checks if a given URL is a valid YouTube URL.
-
-        Args:
-            url (str): The URL to check.
-
-        Returns:
-            bool: True if the URL is a valid YouTube URL, False otherwise.
-        """
-        return re.match(r"https://[www.]*youtube.com.*", url) != None
-
     def isYTVideoURL(self, url: str) -> bool:
         """
         Checks if a given URL is a YouTube video URL (youtube.com/watch).
@@ -187,7 +175,7 @@ class Music(commands.Cog):
         Returns:
             bool: True if the URL is a YouTube playlist URL, False otherwise.
         """
-        return re.match(r"https:\/\/(www\.){0,1}youtube.com\/playlist.*", url) != None
+        return re.match(r"https:\/\/(www\.){0,1}(music\.){0,1}youtube.com\/playlist.*", url) != None
 
     async def getStreamURL(self, url: str, interaction: discord.Interaction) -> str:
         with YoutubeDL(self.YTDL_OPTIONS) as ydl:
@@ -215,7 +203,8 @@ class Music(commands.Cog):
         return {}
 
     def getPlaylistInfo(self, url: str, interaction: discord.Interaction) -> list:
-        playlist_id = url.split("=")[1]
+        playlist_id = re.search(r'list=([a-zA-Z0-9_-]{34})', url).group(1)
+        print(playlist_id)
         youtube = googleapiclient.discovery.build(
             "youtube", "v3", developerKey=YOUTUBE_API_KEY)
         response = youtube.playlistItems().list(
@@ -294,40 +283,38 @@ class Music(commands.Cog):
         else:  # If bot in diff channel, switch voice channel
             await self.vc[guild_id].move_to(userChannel)
 
-        if self.isValidYTURL(query):  # Valid youtubeURL
-            if self.isYTPlaylistURL(query):  # Playlist URL
-                playListInfo = self.getPlaylistInfo(query, interaction)
-                print(len(playListInfo['items']))
-                print(json.dumps(playListInfo))
-                if 'items' not in playListInfo or playListInfo == None:
-                    await interaction.followup.send("Could not get playlist information. Please try again.")
-                    return
-                # Get URL for each song in playlist
-                for item in playListInfo['items']:
-                    url = f"https://www.youtube.com/watch?v={item['snippet']['resourceId']['videoId']}"
-                    # Get Song Information -> {}
-                    songInfo = {"title": item['snippet']['title'], "artist": item['snippet']
-                                ['videoOwnerChannelTitle'], "thumbnail": item['snippet']['thumbnails']['default']['url'], "url": url}
-                    # Add to Queue / Play
-                    self.musicQueue[guild_id].append(songInfo)
-                await self._play(guild_id, interaction)
-            elif self.isYTVideoURL(query):  # Video URL
+        if self.isYTPlaylistURL(query):  # If URL is a playlist URL
+            if re.match(r".*music.youtube.com.*", query) != None:
+                query = query.replace("music.", "")
+
+            playListInfo = self.getPlaylistInfo(query, interaction)
+            if 'items' not in playListInfo or playListInfo == None:
+                await interaction.followup.send("Could not get playlist information. Please try again.")
+                return
+
+            for item in playListInfo['items']:
+                url = f"https://www.youtube.com/watch?v={item['snippet']['resourceId']['videoId']}"
                 # Get Song Information -> {}
-                try:
-                    songInfo = self.getSongInfo(query, interaction)
-                    songInfo['stream_url'] = await self.getStreamURL(query, interaction)
-                except Exception as e:
-                    print(e)
-                    await interaction.followup.send("Could not get song information. Please try again.")
-                    return
-                if 'stream_url' not in songInfo or songInfo == {}:
-                    await interaction.followup.send("Could not find stream URL. Please try again.")
-                    return
+                songInfo = {"title": item['snippet']['title'], "artist": item['snippet']
+                            ['videoOwnerChannelTitle'], "thumbnail": item['snippet']['thumbnails']['default']['url'], "url": url}
                 # Add to Queue / Play
                 self.musicQueue[guild_id].append(songInfo)
-                await self._play(guild_id, interaction)
+            await self._play(guild_id, interaction)
+        elif self.isYTVideoURL(query):  # If URL is a video URL
+            try:
+                songInfo = self.getSongInfo(query, interaction)
+                songInfo['stream_url'] = await self.getStreamURL(query, interaction)
+            except Exception as e:
+                print(e)
+                await interaction.followup.send("Could not get song information. Please try again.")
+                return
+            if 'stream_url' not in songInfo or songInfo == {}:
+                await interaction.followup.send("Could not find stream URL. Please try again.")
+                return
+            # Add to Queue / Play
+            self.musicQueue[guild_id].append(songInfo)
+            await self._play(guild_id, interaction)
         else:  # Requires searching
-            # Search YT -> [urls]
             try:
                 urls = self.search_YT(query)
             except Exception as e:
